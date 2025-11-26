@@ -53,7 +53,10 @@ export async function getPixelColor(
       a: data[offset + 3],
     };
   } catch (error) {
-    console.error(`Error reading pixel at (${x},${y}) from ${imagePath}:`, error);
+    console.error(
+      `Error reading pixel at (${x},${y}) from ${imagePath}:`,
+      error,
+    );
     return { r: 0, g: 0, b: 0, a: 0 };
   }
 }

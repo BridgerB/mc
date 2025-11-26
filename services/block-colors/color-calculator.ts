@@ -95,7 +95,9 @@ export function calculateBlockColors(
       } else if (FOLIAGE_TINTED_BLOCKS.has(blockName) && colormaps.foliage) {
         finalColor = applyTint(finalColor, colormaps.foliage);
         tintedBlocks++;
-      } else if (DRY_FOLIAGE_TINTED_BLOCKS.has(blockName) && colormaps.dry_foliage) {
+      } else if (
+        DRY_FOLIAGE_TINTED_BLOCKS.has(blockName) && colormaps.dry_foliage
+      ) {
         finalColor = applyTint(finalColor, colormaps.dry_foliage);
         tintedBlocks++;
       }
@@ -105,6 +107,8 @@ export function calculateBlockColors(
     }
   }
 
-  console.log(`✅ Calculated colors for ${processed} blocks (${tintedBlocks} biome-tinted)`);
+  console.log(
+    `✅ Calculated colors for ${processed} blocks (${tintedBlocks} biome-tinted)`,
+  );
   return blockColors;
 }

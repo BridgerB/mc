@@ -230,7 +230,11 @@ export async function extractColormaps(
     console.log(`  ${filename}: rgb(${color.r}, ${color.g}, ${color.b})`);
   }
 
-  console.log(`✅ Extracted ${Object.keys(colormaps).length} colormap tints (plains biome at ${x},${y})`);
+  console.log(
+    `✅ Extracted ${
+      Object.keys(colormaps).length
+    } colormap tints (plains biome at ${x},${y})`,
+  );
 
   return colormaps;
 }
