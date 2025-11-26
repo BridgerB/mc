@@ -39,3 +39,7 @@ export interface ColorResult {
   color: RGBA;
   distance: number;
 }
+
+export interface ColormapData {
+  [colormapName: string]: RGBA;
+}

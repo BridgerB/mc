@@ -28,3 +28,32 @@ export async function getAverageColor(imagePath: string): Promise<RGBA> {
     return { r: 0, g: 0, b: 0, a: 0 };
   }
 }
+
+/**
+ * Get the color of a specific pixel at coordinates (x, y)
+ */
+export async function getPixelColor(
+  imagePath: string,
+  x: number,
+  y: number,
+): Promise<RGBA> {
+  try {
+    const { data, info } = await sharp(imagePath)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    // Calculate offset in the buffer (4 bytes per pixel: RGBA)
+    const offset = (y * info.width + x) * 4;
+
+    return {
+      r: data[offset],
+      g: data[offset + 1],
+      b: data[offset + 2],
+      a: data[offset + 3],
+    };
+  } catch (error) {
+    console.error(`Error reading pixel at (${x},${y}) from ${imagePath}:`, error);
+    return { r: 0, g: 0, b: 0, a: 0 };
+  }
+}

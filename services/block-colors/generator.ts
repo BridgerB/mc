@@ -6,6 +6,7 @@ import { ensureDir, exists } from "jsr:@std/fs@1.0.20";
 import { dirname } from "jsr:@std/path@1.1.3";
 import type { BlockColors } from "./types.ts";
 import {
+  extractColormaps,
   extractMinecraftAssets,
   loadBlockModels,
   loadBlockstates,
@@ -29,20 +30,24 @@ export async function generateBlockColors(
   // Step 2: Process textures
   const textureColors = await processTextures(extractDir);
 
-  // Step 3: Load block models
+  // Step 3: Extract colormap data
+  const colormaps = await extractColormaps(extractDir);
+
+  // Step 4: Load block models
   const blockModels = await loadBlockModels(extractDir);
 
-  // Step 4: Load blockstates
+  // Step 5: Load blockstates
   const blockstates = await loadBlockstates(extractDir);
 
-  // Step 5: Calculate block colors
+  // Step 6: Calculate block colors (with biome tinting)
   const blockColors = calculateBlockColors(
     blockstates,
     blockModels,
     textureColors,
+    colormaps,
   );
 
-  // Step 6: Sort alphabetically
+  // Step 7: Sort alphabetically
   const sortedBlockColors: BlockColors = {};
   const sortedKeys = Object.keys(blockColors).sort();
   for (const key of sortedKeys) {

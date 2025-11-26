@@ -4,8 +4,8 @@
 
 import { exists } from "jsr:@std/fs@1.0.20";
 import { join } from "jsr:@std/path@1.1.3";
-import type { BlockModel, Blockstate, RGBA } from "./types.ts";
-import { getAverageColor } from "./image-processing.ts";
+import type { BlockModel, Blockstate, ColormapData, RGBA } from "./types.ts";
+import { getAverageColor, getPixelColor } from "./image-processing.ts";
 import { loadJSON, walkFiles } from "./file-utils.ts";
 
 /**
@@ -195,4 +195,42 @@ export async function loadBlockstates(
 
   console.log(`✅ Loaded ${blockstateToModel.size} blockstates`);
   return blockstateToModel;
+}
+
+/**
+ * Extract colormap tint colors from ALL Minecraft colormap files
+ * Uses default temperate/plains biome coordinates (128, 128)
+ * Dynamically discovers all .png files in the colormap directory
+ */
+export async function extractColormaps(
+  extractedDataDir: string,
+): Promise<ColormapData> {
+  console.log("🌈 Extracting colormap data...");
+
+  const colormapDir = join(
+    extractedDataDir,
+    "assets/minecraft/textures/colormap",
+  );
+
+  // Different biomes have different tints, let's use a vibrant one
+  const x = 1;
+  const y = 1;
+
+  const colormaps: ColormapData = {};
+
+  // Dynamically discover all colormap PNG files
+  for await (const colormapPath of walkFiles(colormapDir, /\.png$/)) {
+    const filename = colormapPath
+      .replace(colormapDir + "/", "")
+      .replace(".png", "");
+
+    const color = await getPixelColor(colormapPath, x, y);
+    colormaps[filename] = color;
+
+    console.log(`  ${filename}: rgb(${color.r}, ${color.g}, ${color.b})`);
+  }
+
+  console.log(`✅ Extracted ${Object.keys(colormaps).length} colormap tints (plains biome at ${x},${y})`);
+
+  return colormaps;
 }
