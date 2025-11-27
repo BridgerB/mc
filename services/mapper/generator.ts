@@ -7,7 +7,7 @@ import { RegionFile } from "./region.ts";
 import { parseChunk } from "./chunk-parser.ts";
 import { getBlockColor, getTopBlock } from "./block-resolver.ts";
 import { createEmptyImage, savePNG, setPixel } from "./image-renderer.ts";
-import { createStats, printStats, trackBlock } from "./statistics.ts";
+import { createStats, trackBlock } from "./statistics.ts";
 
 /**
  * Generate world map PNG from region files

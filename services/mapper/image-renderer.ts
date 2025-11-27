@@ -2,7 +2,7 @@
  * PNG image creation and rendering
  */
 
-import { PNG } from "npm:pngjs@7.0.0";
+import { PNG } from "npm:pngjs";
 import type { RGB } from "./types.ts";
 
 /**
