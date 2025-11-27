@@ -112,8 +112,8 @@ in {
     enable = true;
     allowedTCPPorts = [
       22 # SSH
-      25577 # Velocity Proxy (PUBLIC)
-      # Backend servers (25565-25567) are NOT exposed - internal only
+      25565 # Velocity Proxy (PUBLIC)
+      # Backend servers (25566-25568) are NOT exposed - internal only
     ];
   };
 
@@ -202,12 +202,10 @@ in {
             # Ensure secret is readable (in case it was created with wrong perms before)
             chmod 644 forwarding.secret
 
-            # Copy velocity.toml configuration
-            if [ ! -f velocity.toml ]; then
-              echo "Installing Velocity configuration..."
-              cp ${./velocity.toml} velocity.toml
-              chmod 644 velocity.toml
-            fi
+            # Always copy velocity.toml configuration (overwrite to get latest changes)
+            echo "Installing Velocity configuration..."
+            cp ${./velocity.toml} velocity.toml
+            chmod 644 velocity.toml
 
             echo "Velocity proxy setup complete"
           '';
@@ -220,7 +218,7 @@ in {
     // # Paper Server Services (3 servers: lobby, creative, survival)
     mkPaperServer {
       name = "lobby";
-      port = 25565;
+      port = 25566;
       gamemode = "survival";
       pvp = false;
       difficulty = "normal";
@@ -228,7 +226,7 @@ in {
     }
     // mkPaperServer {
       name = "creative";
-      port = 25566;
+      port = 25567;
       gamemode = "creative";
       pvp = false;
       difficulty = "peaceful";
@@ -236,7 +234,7 @@ in {
     }
     // mkPaperServer {
       name = "survival";
-      port = 25567;
+      port = 25568;
       gamemode = "survival";
       pvp = true;
       difficulty = "hard";
