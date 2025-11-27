@@ -19,15 +19,14 @@
         config.allowUnfree = true;
       };
 
-      # Vanilla Minecraft Server 1.21.4
-      # Downloaded directly from Mojang's official distribution
-      minecraftServer = pkgs.fetchurl {
-        url = "https://piston-data.mojang.com/v1/objects/95495a7f485eedd84ce928cef5e223b757d2f764/server.jar";
-        sha256 = "sha256-tKU1vHXP/FqmG/TYNyzg5k4kYfZ0PJXmHHSvZVb1Hso=";
-      };
+      # Velocity Proxy from nixpkgs (3.4.0-unstable-2025-11-09)
+      velocity = pkgs.velocity;
+
+      # Paper Server from nixpkgs (1.21.10-91)
+      paperServer = pkgs.papermc;
     in {
-      default = minecraftServer;
-      minecraft-server = minecraftServer;
+      default = velocity;
+      inherit velocity paperServer;
     });
 
     # NixOS system configuration for OCI ARM deployment

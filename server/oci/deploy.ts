@@ -40,7 +40,13 @@ async function deploy() {
 
   // Copy configuration files (NOT hardware-configuration.nix)
   console.log("\nCopying configuration files...");
-  const files = ["flake.nix", "flake.lock", "configuration.nix"];
+  const files = [
+    "flake.nix",
+    "flake.lock",
+    "configuration.nix",
+    "config.nix",
+    "velocity.toml",
+  ];
 
   for (const file of files) {
     await runCommand("scp", [

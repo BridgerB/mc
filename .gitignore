@@ -26,3 +26,8 @@ services/block-colors/block-colors.json
 services/mapper/output.png
 server/worlds
 .servers
+server/oci/result
+
+# Personal OCI configuration
+server/oci/config.ts
+server/oci/config.nix

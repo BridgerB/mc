@@ -1,18 +1,25 @@
 # NixOS Minecraft Server for Oracle Cloud Infrastructure (OCI)
 
-A self-contained NixOS configuration for deploying a vanilla Minecraft server to
-Oracle Cloud Infrastructure's ARM Free Tier (Ampere A1).
+A self-contained NixOS configuration for deploying a Velocity proxy with
+multiple Paper servers to Oracle Cloud Infrastructure's ARM Free Tier (Ampere
+A1).
 
 ## Overview
 
-This configuration deploys a production-ready Minecraft server with:
+This configuration deploys a production-ready Minecraft network with:
 
-- **Vanilla Minecraft 1.21.4** - Official Mojang server
+- **Velocity Proxy 3.4.0-unstable-2025-11-09** (from nixpkgs) - High-performance
+  Minecraft proxy
+- **Paper Server 1.21.10 build 91** (from nixpkgs) - Three backend servers
+  (lobby, creative, survival)
 - **OCI ARM Free Tier** - 4 OCPU, 24GB RAM (free forever)
 - **NixOS** - Declarative, reproducible Linux distribution
-- **Automatic startup** - Server starts on boot via systemd
+- **Modern Forwarding** - Cryptographic player authentication between proxy and
+  backends
+- **Automatic startup** - All services start on boot via systemd
 - **Security hardening** - SSH key-only auth, fail2ban, firewall
 - **JVM optimization** - G1GC tuning for Minecraft performance
+- **Automatic updates** - Uses nixpkgs unstable for latest Minecraft versions
 
 ## System Requirements
 
@@ -36,10 +43,20 @@ This configuration deploys a production-ready Minecraft server with:
 Internet → OCI Firewall → NixOS Host
                             ├─ SSH (port 22)
                             ├─ fail2ban
-                            └─ Minecraft Server (port 25565)
-                                └─ systemd service
-                                    └─ Java 21 + server.jar
-                                        └─ /var/lib/minecraft/
+                            └─ Velocity Proxy (port 25577, PUBLIC)
+                                ├─ systemd: velocity-proxy.service
+                                ├─ /var/lib/velocity/
+                                ├─ Modern Forwarding Secret
+                                └─ Backend Servers (127.0.0.1, INTERNAL ONLY):
+                                    ├─ Paper Lobby (port 25565)
+                                    │   └─ systemd: minecraft-lobby.service
+                                    │       └─ /var/lib/minecraft/lobby/
+                                    ├─ Paper Creative (port 25566)
+                                    │   └─ systemd: minecraft-creative.service
+                                    │       └─ /var/lib/minecraft/creative/
+                                    └─ Paper Survival (port 25567)
+                                        └─ systemd: minecraft-survival.service
+                                            └─ /var/lib/minecraft/survival/
 ```
 
 ## Quick Start
@@ -67,7 +84,8 @@ cd /home/bridger/git/mc/server/oci
 nix build .#nixosConfigurations.minecraft.config.system.build.toplevel
 ```
 
-This validates your configuration without deploying.
+This validates your configuration without deploying. The configuration
+automatically allows unfree packages for Minecraft components.
 
 ### 3. Deploy to OCI
 
@@ -87,18 +105,40 @@ instructions.
 6. Run `nixos-install`
 7. Reboot and remove rescue ISO
 
-#### Option B: Manual Installation
+#### Option B: Using deploy.ts Script (Recommended for Updates)
 
-If you already have a NixOS instance running on OCI:
+If you already have a NixOS instance running on OCI, use the deployment script:
+
+```bash
+# From your local machine
+cd /home/bridger/git/mc/server/oci
+
+# Deploy to your OCI instance
+./deploy.ts <your-oci-ip>
+
+# Example:
+./deploy.ts 144.24.32.76
+```
+
+The deployment script will:
+
+1. Wait for SSH to be ready
+2. Generate fresh hardware configuration on the server
+3. Copy all configuration files to `/etc/nixos/`
+4. Run `nixos-rebuild switch --flake .#minecraft`
+5. Restart all services
+
+#### Option C: Manual Installation
+
+If you prefer manual deployment:
 
 ```bash
 # On the OCI instance
 cd /etc/nixos
-git clone https://github.com/yourusername/mc.git
-cd mc/server/oci
+# Copy your configuration files here
 
 # Build and activate
-sudo nixos-rebuild switch --flake .#minecraft
+nixos-rebuild switch --flake .#minecraft
 ```
 
 ### 4. Connect to Minecraft
@@ -106,43 +146,85 @@ sudo nixos-rebuild switch --flake .#minecraft
 Once deployed and the server is running:
 
 ```
-Minecraft Server Address: <your-oci-ip>:25565
+Minecraft Server Address: <your-oci-ip>:25577
 ```
 
 Get your instance's public IP from the OCI console.
+
+**Note**: Connect to port **25577** (Velocity proxy), not 25565. The backend
+servers on ports 25565-25567 are internal only.
+
+### 5. Switch Between Servers
+
+Once connected, you can switch between the three servers:
+
+```
+/server lobby      - Switch to the lobby server (survival, no PVP)
+/server creative   - Switch to the creative server (creative mode, peaceful)
+/server survival   - Switch to the survival server (hard difficulty, PVP enabled)
+```
 
 ## Configuration
 
 ### Server Settings
 
-Default server settings are in `configuration.nix` (lines 84-102):
+Default settings for each Paper server are defined in `configuration.nix` using
+the `mkPaperServer` helper function. Each server has its own configuration:
 
-```properties
-server-port=25565
-max-players=20
-difficulty=normal
-gamemode=survival
-pvp=true
-motd=NixOS Minecraft Server on Oracle Cloud ARM
-```
+**Lobby Server** (port 25565):
 
-After first boot, you can modify `/var/lib/minecraft/server.properties` directly
-and restart the service.
+- Gamemode: survival
+- PVP: disabled
+- Difficulty: normal
+- Memory: 4GB
+
+**Creative Server** (port 25566):
+
+- Gamemode: creative
+- PVP: disabled
+- Difficulty: peaceful
+- Memory: 4GB
+
+**Survival Server** (port 25567):
+
+- Gamemode: survival
+- PVP: enabled
+- Difficulty: hard
+- Memory: 4GB
+
+After first boot, you can modify each server's properties:
+
+- `/var/lib/minecraft/lobby/server.properties`
+- `/var/lib/minecraft/creative/server.properties`
+- `/var/lib/minecraft/survival/server.properties`
+
+Then restart the corresponding service.
 
 ### Memory Allocation
 
-Default JVM settings allocate 10GB of the 24GB available:
+Total memory allocation (~12GB out of 24GB):
+
+- **Lobby Server**: 4GB (configuration.nix:218)
+- **Creative Server**: 4GB (configuration.nix:226)
+- **Survival Server**: 4GB (configuration.nix:234)
+- **Velocity Proxy**: Uses JVM defaults (typically 1-2GB)
+- **System/OS**: ~12GB remaining
+
+**To adjust memory for a specific server**:
+
+Edit `configuration.nix` and modify the `memoryMB` parameter in the
+corresponding `mkPaperServer` call:
 
 ```nix
-ExecStart = "${pkgs.jdk21}/bin/java -Xmx10G -Xms10G ...
+mkPaperServer {
+  name = "survival";
+  port = 25567;
+  memoryMB = 6144; # Change from 4096 to 6GB
+  ...
+}
 ```
 
-This leaves ~14GB for the OS, which is appropriate for vanilla Minecraft.
-
-**To adjust memory**:
-
-Edit `configuration.nix` line 106 and change `-Xmx10G -Xms10G` to your desired
-values, then rebuild:
+Then rebuild:
 
 ```bash
 sudo nixos-rebuild switch --flake .#minecraft
@@ -157,44 +239,63 @@ networking.firewall = {
   enable = true;
   allowedTCPPorts = [
     22    # SSH
-    25565 # Minecraft
+    25577 # Velocity Proxy (PUBLIC)
+    # Backend servers (25565-25567) are NOT exposed - internal only
   ];
 };
 ```
 
-**To add ports** (e.g., for future Velocity proxy):
-
-```nix
-allowedTCPPorts = [ 22 25565 25577 ];
-```
-
-Then rebuild and switch.
+**Important**: Only port 25577 (Velocity proxy) is exposed to the internet. The
+backend Paper servers on ports 25565-25567 are bound to 127.0.0.1 and are NOT
+accessible externally. This is a security feature - all player connections must
+go through the Velocity proxy.
 
 ## Server Management
 
-### Systemd Service
+### Systemd Services
 
-The Minecraft server runs as a systemd service:
+The server runs as four separate systemd services:
+
+**Velocity Proxy**:
 
 ```bash
-# Check server status
-sudo systemctl status minecraft-server
+# Check proxy status
+sudo systemctl status velocity-proxy
 
-# View logs (live)
-sudo journalctl -u minecraft-server -f
+# View proxy logs (live)
+sudo journalctl -u velocity-proxy -f
 
-# Restart server
-sudo systemctl restart minecraft-server
-
-# Stop server
-sudo systemctl stop minecraft-server
-
-# Start server
-sudo systemctl start minecraft-server
-
-# Disable auto-start on boot
-sudo systemctl disable minecraft-server
+# Restart proxy (will disconnect all players)
+sudo systemctl restart velocity-proxy
 ```
+
+**Paper Backend Servers**:
+
+```bash
+# Check all backend server statuses
+sudo systemctl status minecraft-lobby
+sudo systemctl status minecraft-creative
+sudo systemctl status minecraft-survival
+
+# View logs for a specific server
+sudo journalctl -u minecraft-lobby -f
+sudo journalctl -u minecraft-creative -f
+sudo journalctl -u minecraft-survival -f
+
+# Restart a specific server (only affects players on that server)
+sudo systemctl restart minecraft-lobby
+sudo systemctl restart minecraft-creative
+sudo systemctl restart minecraft-survival
+
+# Stop all servers
+sudo systemctl stop velocity-proxy minecraft-lobby minecraft-creative minecraft-survival
+
+# Start all servers
+sudo systemctl start velocity-proxy minecraft-lobby minecraft-creative minecraft-survival
+```
+
+**Note**: The Paper servers depend on velocity-proxy, so if the proxy restarts,
+all backend servers will restart as well.
 
 ### Server Console
 
@@ -220,26 +321,43 @@ Then use an RCON client to send commands.
 
 ### World Data
 
-All server data is stored in `/var/lib/minecraft/`:
+Server data is organized by server type:
+
+**Velocity Proxy** - `/var/lib/velocity/`:
 
 ```
-/var/lib/minecraft/
-├── server.jar          # Minecraft server JAR
-├── eula.txt            # EULA acceptance
-├── server.properties   # Server configuration
-├── world/              # Overworld
-├── world_nether/       # Nether dimension
-├── world_the_end/      # End dimension
-├── logs/               # Server logs
-├── plugins/            # Plugin directory (unused in vanilla)
-└── banned-players.json # Banned players
+/var/lib/velocity/
+├── velocity.toml       # Proxy configuration
+├── forwarding.secret   # Modern forwarding secret (auto-generated, perms: 644)
+├── plugins/            # Velocity plugins (optional)
+└── logs/               # Proxy logs
+
+# Directory permissions: 755 (readable by minecraft user for secret access)
+```
+
+**Paper Servers** - `/var/lib/minecraft/{lobby,creative,survival}/`:
+
+```
+/var/lib/minecraft/lobby/          # Lobby server
+├── eula.txt                       # EULA acceptance (auto-generated)
+├── server.properties              # Server configuration (auto-generated)
+├── config/
+│   └── paper-global.yml           # Paper config with Velocity forwarding
+├── world/                         # Overworld
+├── world_nether/                  # Nether dimension
+├── world_the_end/                 # End dimension
+├── plugins/                       # Paper plugins (optional)
+└── logs/                          # Server logs
+
+# Same structure for /var/lib/minecraft/creative/ and /var/lib/minecraft/survival/
+# No server.jar symlink - Paper runs directly from Nix store
 ```
 
 ### Backups
 
 **Important**: Implement a backup strategy for `/var/lib/minecraft/world*`
 
-Example backup script:
+Example backup script for all three servers:
 
 ```bash
 #!/usr/bin/env bash
@@ -250,21 +368,32 @@ DATE=$(date +%Y%m%d-%H%M%S)
 
 mkdir -p "$BACKUP_DIR"
 
-# Stop server for consistent backup
-systemctl stop minecraft-server
+# Backup each server
+for server in lobby creative survival; do
+  echo "Backing up $server..."
 
-# Backup world data
-tar -czf "$BACKUP_DIR/minecraft-$DATE.tar.gz" \
-  -C /var/lib/minecraft \
-  world world_nether world_the_end server.properties
+  # Stop server for consistent backup
+  systemctl stop minecraft-$server
 
-# Restart server
-systemctl start minecraft-server
+  # Backup world data
+  tar -czf "$BACKUP_DIR/minecraft-$server-$DATE.tar.gz" \
+    -C /var/lib/minecraft/$server \
+    world world_nether world_the_end server.properties config/
+
+  # Restart server
+  systemctl start minecraft-$server
+done
+
+# Backup Velocity config
+tar -czf "$BACKUP_DIR/velocity-$DATE.tar.gz" \
+  -C /var/lib/velocity \
+  velocity.toml forwarding.secret
 
 # Keep only last 7 backups
 ls -t "$BACKUP_DIR"/minecraft-*.tar.gz | tail -n +8 | xargs rm -f
+ls -t "$BACKUP_DIR"/velocity-*.tar.gz | tail -n +8 | xargs rm -f
 
-echo "Backup completed: $BACKUP_DIR/minecraft-$DATE.tar.gz"
+echo "Backup completed: $BACKUP_DIR/*-$DATE.tar.gz"
 ```
 
 Add to crontab for automated backups:
@@ -298,7 +427,7 @@ sudo fail2ban-client set sshd unbanip <ip-address>
 
 ### Firewall
 
-Only ports 22 (SSH) and 25565 (Minecraft) are exposed.
+Only ports 22 (SSH) and 25577 (Velocity Proxy) are exposed.
 
 **Verify firewall rules**:
 
@@ -314,7 +443,10 @@ In addition to the NixOS firewall, configure OCI Security Lists:
 2. Select your VCN → Security Lists
 3. Add ingress rules:
    - **SSH**: Source 0.0.0.0/0, TCP port 22
-   - **Minecraft**: Source 0.0.0.0/0, TCP port 25565
+   - **Velocity Proxy**: Source 0.0.0.0/0, TCP port 25577
+
+**Important**: Do NOT add rules for ports 25565-25567. These backend servers
+should remain internal only.
 
 ## Monitoring
 
@@ -330,73 +462,114 @@ duf
 # Network activity
 iftop
 
-# Minecraft-specific
-sudo journalctl -u minecraft-server -f
+# Velocity proxy logs
+sudo journalctl -u velocity-proxy -f
+
+# Paper server logs
+sudo journalctl -u minecraft-lobby -f
+sudo journalctl -u minecraft-creative -f
+sudo journalctl -u minecraft-survival -f
 ```
 
 ### Player Activity
 
-View server logs:
+View server logs for player joins/leaves:
 
 ```bash
-sudo journalctl -u minecraft-server | grep joined
-sudo journalctl -u minecraft-server | grep left
+# Velocity proxy connections
+sudo journalctl -u velocity-proxy | grep "has connected"
+sudo journalctl -u velocity-proxy | grep "has disconnected"
+
+# Server switches
+sudo journalctl -u velocity-proxy | grep "has connected to"
+
+# Individual server activity
+sudo journalctl -u minecraft-lobby | grep joined
+sudo journalctl -u minecraft-creative | grep joined
+sudo journalctl -u minecraft-survival | grep joined
 ```
 
 ## Troubleshooting
 
 ### Server Won't Start
 
-**Check service status**:
+**Check service status for all components**:
 
 ```bash
-sudo systemctl status minecraft-server
+sudo systemctl status velocity-proxy
+sudo systemctl status minecraft-lobby
+sudo systemctl status minecraft-creative
+sudo systemctl status minecraft-survival
 ```
 
 **View detailed logs**:
 
 ```bash
-sudo journalctl -u minecraft-server -n 100
+sudo journalctl -u velocity-proxy -n 100
+sudo journalctl -u minecraft-lobby -n 100
+sudo journalctl -u minecraft-creative -n 100
+sudo journalctl -u minecraft-survival -n 100
 ```
 
 **Common issues**:
 
-1. **Out of memory**: Reduce JVM heap size in `configuration.nix`
-2. **Port already in use**: Check for other services on port 25565
-3. **EULA not accepted**: Verify `/var/lib/minecraft/eula.txt` contains
-   `eula=true`
+1. **Out of memory**: Reduce JVM heap size in `configuration.nix` (memoryMB
+   parameter)
+2. **Port already in use**: Check for other services on ports 25565-25567 or
+   25577
+3. **EULA not accepted**: Verify each server's `eula.txt` contains `eula=true`
+4. **Forwarding secret mismatch**:
+   - Ensure `/var/lib/velocity/forwarding.secret` exists
+   - Check `/var/lib/velocity` directory permissions are `755`
+   - Verify secret file permissions are `644`
+   - Test: `sudo -u minecraft cat /var/lib/velocity/forwarding.secret`
+5. **Paper servers can't connect**: Check that Velocity proxy is running first
+   (Paper servers depend on it)
+6. **"Unable to verify player details"**: Indicates Velocity forwarding secret
+   mismatch - delete Paper configs and restart:
+   ```bash
+   sudo rm -rf /var/lib/minecraft/*/config/paper-global.yml
+   sudo systemctl restart minecraft-lobby minecraft-creative minecraft-survival
+   ```
 
 ### Can't Connect to Server
 
 **Test connectivity**:
 
 ```bash
-# From your local machine
-nc -zv <oci-ip> 25565
+# From your local machine (test Velocity proxy)
+nc -zv <oci-ip> 25577
 ```
 
 **Check firewall**:
 
 ```bash
 # On OCI instance
-sudo iptables -L -n | grep 25565
+sudo iptables -L -n | grep 25577
 ```
 
-**Verify server is listening**:
+**Verify Velocity proxy is listening**:
 
 ```bash
+# Should show Velocity listening on 0.0.0.0:25577
+sudo ss -tlnp | grep 25577
+
+# Verify backend servers are listening on localhost only
 sudo ss -tlnp | grep 25565
+sudo ss -tlnp | grep 25566
+sudo ss -tlnp | grep 25567
 ```
 
 ### Players Can't Join
 
-**Check if server is in online mode**:
+**Check if backend servers are in offline mode** (required for Velocity):
 
 ```bash
-grep online-mode /var/lib/minecraft/server.properties
+grep online-mode /var/lib/minecraft/lobby/server.properties
 ```
 
-Should be `online-mode=true` for Mojang authentication.
+Should be `online-mode=false` for backend servers. Velocity handles Mojang
+authentication.
 
 **Verify network connectivity**:
 
@@ -447,29 +620,39 @@ Edit `configuration.nix` line 106 and increase heap size.
 
 ## Updating
 
-### Update Minecraft Version
+### Update to Latest Minecraft Versions
 
-1. Find the new server.jar URL at
-   [Minecraft Downloads](https://www.minecraft.net/en-us/download/server)
-
-2. Update `configuration.nix` line 77 with the new download URL:
-
-```nix
-${pkgs.curl}/bin/curl -o server.jar https://piston-data.mojang.com/v1/objects/NEW_HASH_HERE/server.jar
-```
-
-3. Remove existing server.jar:
+This configuration uses nixpkgs packages for both Velocity and Paper, which
+means you get automatic updates when you update nixpkgs:
 
 ```bash
-sudo rm /var/lib/minecraft/server.jar
+# Update flake inputs to get latest nixpkgs (and thus latest Minecraft versions)
+nix flake update
+
+# Deploy the update
+./deploy.ts <your-oci-ip>
+
+# Or manually on the server:
+cd /etc/nixos
+nixos-rebuild switch --flake .#minecraft
 ```
 
-4. Rebuild and restart:
+The nixpkgs unstable channel typically has the latest stable Minecraft versions
+within a few days of release.
+
+**Check current versions**:
 
 ```bash
-sudo nixos-rebuild switch --flake .#minecraft
-sudo systemctl restart minecraft-server
+# On server
+systemctl status velocity-proxy | grep -i version
+journalctl -u minecraft-lobby -n 50 | grep "Paper version"
 ```
+
+**Manual version override** (not recommended):
+
+If you need a specific version not yet in nixpkgs, you can temporarily override
+by creating custom package files. However, this defeats the purpose of using
+nixpkgs and requires manual sha256 calculation.
 
 ### Update NixOS System
 
@@ -477,50 +660,45 @@ sudo systemctl restart minecraft-server
 # Update flake inputs
 nix flake update
 
-# Rebuild with new nixpkgs
+# Deploy (from local machine)
+./deploy.ts <your-oci-ip>
+
+# Or rebuild on server
 sudo nixos-rebuild switch --flake .#minecraft
 
 # Reboot if kernel updated
 sudo reboot
 ```
 
-## Future Upgrade Path
+## Current Architecture
 
-This vanilla Minecraft setup is designed to be upgraded incrementally:
+This setup runs a complete Velocity + Paper multi-server network:
 
-### Phase 1: Current - Vanilla Minecraft
+✅ **Velocity Proxy** - Modern forwarding enabled, handles all player
+connections ✅ **Paper Lobby** - Survival mode, no PVP, normal difficulty ✅
+**Paper Creative** - Creative mode, no PVP, peaceful difficulty ✅ **Paper
+Survival** - Survival mode, PVP enabled, hard difficulty
 
-✅ You are here
+### Future Enhancements
 
-### Phase 2: Upgrade to Paper
+Possible improvements to this setup:
 
-Replace vanilla server.jar with Paper for better performance and plugin support.
+**Plugins**:
 
-**Changes needed**:
+- Add Velocity plugins to `/var/lib/velocity/plugins/`
+- Add Paper plugins to each server's `plugins/` directory
+- Restart services after adding plugins
 
-- Update `configuration.nix` to download Paper instead of vanilla
-- Add plugin directory management
-- Adjust JVM flags for Paper optimizations
+**Additional Servers**:
 
-### Phase 3: Add Velocity Proxy
+- Add more `mkPaperServer` definitions in `configuration.nix`
+- Update `velocity.toml` to register new servers
+- Adjust memory allocation as needed
 
-Deploy Velocity proxy for multi-world support.
+**Resource Packs**:
 
-**Changes needed**:
-
-- Add Velocity proxy service
-- Configure modern forwarding with secrets
-- Connect to `/home/bridger/git/mc/server/velocity` setup
-
-### Phase 4: Multi-Server Network
-
-Run multiple Paper servers (lobby, creative, survival) behind Velocity.
-
-**Changes needed**:
-
-- Increase instance size or deploy additional instances
-- Configure Velocity to proxy multiple backends
-- Setup per-world configurations
+- Configure server resource packs in each server's `server.properties`
+- Host resource packs externally for better performance
 
 ## Development
 
@@ -548,21 +726,39 @@ nix fmt
 
 ## Files in This Directory
 
-- **flake.nix** - Nix flake configuration and Minecraft server package
-- **configuration.nix** - NixOS system configuration
+- **flake.nix** - Nix flake configuration using nixpkgs Velocity and Paper
+  packages
+- **configuration.nix** - NixOS system configuration with Velocity proxy + 3
+  Paper servers
 - **hardware-configuration.nix** - Hardware-specific settings for OCI ARM
+  (generated on server, not used locally)
+- **velocity.toml** - Velocity proxy configuration template
+- **launch.ts** - Deno script to launch OCI instance (requires OCI CLI)
+- **deploy.ts** - Deno script to deploy configuration to OCI instance
+- **status.ts** - Deno script to check server status
+- **check.ts** - Deno script to validate OCI session
+- **validate-session.ts** - Deno script to validate OCI authentication
 - **README.md** - This documentation
+
+**Note**: The old `velocity.nix` and `minecraft-server.nix` files are no longer
+used as we now use packages directly from nixpkgs.
 
 ## Resources
 
 ### Official Documentation
 
-- [Minecraft Server Downloads](https://www.minecraft.net/en-us/download/server)
+- [PaperMC](https://papermc.io/) - Paper server and Velocity proxy
+- [Velocity Documentation](https://docs.papermc.io/velocity) - Proxy setup and
+  configuration
+- [Paper Documentation](https://docs.papermc.io/paper) - Server configuration
+  and plugins
 - [NixOS Manual](https://nixos.org/manual/nixos/stable/)
 - [Oracle Cloud Free Tier](https://www.oracle.com/cloud/free/)
 
 ### Community
 
+- [PaperMC Discord](https://discord.gg/papermc) - Official support for Paper and
+  Velocity
 - [Minecraft Wiki](https://minecraft.fandom.com/wiki/Minecraft_Wiki)
 - [NixOS Discourse](https://discourse.nixos.org/)
 - [r/admincraft](https://www.reddit.com/r/admincraft/) - Minecraft server admin
@@ -579,9 +775,13 @@ This NixOS configuration is provided as-is for running Minecraft servers.
 
 For issues specific to this configuration, check:
 
-1. Server logs: `sudo journalctl -u minecraft-server -f`
-2. System logs: `sudo journalctl -xe`
-3. NixOS manual: https://nixos.org/manual/nixos/stable/
+1. Velocity proxy logs: `sudo journalctl -u velocity-proxy -f`
+2. Paper server logs:
+   `sudo journalctl -u minecraft-{lobby,creative,survival} -f`
+3. System logs: `sudo journalctl -xe`
+4. NixOS manual: https://nixos.org/manual/nixos/stable/
+5. Velocity docs: https://docs.papermc.io/velocity
+6. Paper docs: https://docs.papermc.io/paper
 
 For Minecraft gameplay issues, consult the
 [Minecraft Wiki](https://minecraft.fandom.com/wiki/Minecraft_Wiki) or

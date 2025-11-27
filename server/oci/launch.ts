@@ -1,17 +1,16 @@
 #!/usr/bin/env -S deno run --allow-run --allow-env --allow-read
 
+import { config as userConfig } from "./config.ts";
+
 const config = {
   displayName: "minecraft-server",
   availabilityDomain: "ndHF:PHX-AD-1",
-  compartmentId:
-    "ocid1.tenancy.oc1..aaaaaaaaxce66srgd3kttidixoktcxyqdbmc5spi4vnhktccnj5uvyeyuddq",
+  compartmentId: userConfig.tenancyId,
   shape: "VM.Standard.A1.Flex",
   ocpus: 4,
   memoryInGBs: 24,
-  imageId:
-    "ocid1.image.oc1.phx.aaaaaaaagslm6zxz4ab6pivcatx6wpvl3hkid6ywhsfx4mvlckqmbceyffoa",
-  subnetId:
-    "ocid1.subnet.oc1.phx.aaaaaaaas5lnssbgrqqfzybiypmm3rvqzdqydej35pby6l3lt5ij5eqideba",
+  imageId: userConfig.imageId,
+  subnetId: userConfig.subnetId,
   sshKeyFile: `${Deno.env.get("HOME")}/.ssh/id_ed25519.pub`,
   bootVolumeSizeInGBs: 100,
 };
