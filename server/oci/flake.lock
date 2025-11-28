@@ -1,6 +1,54 @@
 {
   "nodes": {
+    "advanced-portals": {
+      "inputs": {
+        "advanced-portals-src": "advanced-portals-src",
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "path": "../plugins/advanced-portals",
+        "type": "path"
+      },
+      "original": {
+        "path": "../plugins/advanced-portals",
+        "type": "path"
+      },
+      "parent": []
+    },
+    "advanced-portals-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1760446803,
+        "narHash": "sha256-YCwdgZz6U8PE9kvgz5Krw/5G0oX3M0meE74WmdMhw6I=",
+        "owner": "sekwah41",
+        "repo": "Advanced-Portals",
+        "rev": "1a92a368bc7e3ae3557beb174b08fdc3c4238a39",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sekwah41",
+        "ref": "main",
+        "repo": "Advanced-Portals",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
+      "locked": {
+        "lastModified": 1763966396,
+        "narHash": "sha256-6eeL1YPcY1MV3DDStIDIdy/zZCDKgHdkCmsrLJFiZf0=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "5ae3b07d8d6527c42f17c876e404993199144b6a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
       "locked": {
         "lastModified": 1763966396,
         "narHash": "sha256-6eeL1YPcY1MV3DDStIDIdy/zZCDKgHdkCmsrLJFiZf0=",
@@ -18,7 +66,8 @@
     },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "advanced-portals": "advanced-portals",
+        "nixpkgs": "nixpkgs_2"
       }
     }
   },
