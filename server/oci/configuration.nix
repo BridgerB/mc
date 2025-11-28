@@ -3,6 +3,7 @@
   config,
   lib,
   pkgs,
+  advanced-portals,
   ...
 }: let
   # Import user-specific configuration
@@ -12,6 +13,28 @@
   # Paper: 1.21.10-91
   velocity = pkgs.velocity;
   paperServer = pkgs.papermc;
+
+  # Advanced Portals plugin (unified JAR for both Velocity and Paper)
+  advancedPortalsJar = advanced-portals.packages.${pkgs.system}.advanced-portals;
+  advancedPortalsConfig = advanced-portals.lib.mkConfig {
+    enableProxySupport = true;
+  };
+
+  # Lobby world extracted from tarball
+  lobbyWorld = pkgs.stdenv.mkDerivation {
+    name = "lobby-world";
+    src = pkgs.fetchurl {
+      url = "file://${toString ../worlds/lobby.tar.xz}";
+      sha256 = "1f25y7sb0i0fvmn3mzxawhnq4l8ac6pgm9mgszxx2fk4qa97cbas";
+    };
+
+    sourceRoot = ".";
+
+    installPhase = ''
+      mkdir -p $out
+      cp -r lobby-world/* $out/
+    '';
+  };
 
   # Shared forwarding secret path
   secretFile = "/var/lib/velocity/forwarding.secret";
@@ -84,7 +107,25 @@
               secret: "$SECRET"
           YAML
 
-          echo "Paper ${name} server setup complete"
+          # Install Advanced Portals plugin
+          mkdir -p plugins/AdvancedPortals
+          ln -sf ${advancedPortalsJar}/lib/advanced-portals.jar plugins/advanced-portals.jar
+
+          # Copy Advanced Portals config with proxy support enabled
+          cat > plugins/AdvancedPortals/config.yaml << 'YAML'
+          ${advancedPortalsConfig}
+          YAML
+
+          # For lobby server, deploy the lobby world if it doesn't exist
+          ${lib.optionalString (name == "lobby") ''
+            if [ ! -d world ]; then
+              echo "Deploying lobby world..."
+              cp -r ${lobbyWorld} world
+              chown -R minecraft:minecraft world
+            fi
+          ''}
+
+          echo "Paper ${name} server setup complete with Advanced Portals"
         '';
 
         # Start Paper server - use nixpkgs papermc
@@ -207,7 +248,11 @@ in {
             cp ${./velocity.toml} velocity.toml
             chmod 644 velocity.toml
 
-            echo "Velocity proxy setup complete"
+            # Install Advanced Portals plugin
+            mkdir -p plugins
+            ln -sf ${advancedPortalsJar}/lib/advanced-portals.jar plugins/advanced-portals.jar
+
+            echo "Velocity proxy setup complete with Advanced Portals"
           '';
 
           # Start Velocity proxy
