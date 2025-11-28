@@ -19,22 +19,36 @@
     packages = forAllSystems (system: let
       pkgs = import nixpkgs {inherit system;};
     in {
-      advanced-portals = pkgs.stdenv.mkDerivation {
+      advanced-portals = pkgs.stdenv.mkDerivation rec {
         pname = "advanced-portals";
         version = "2.6.0-SNAPSHOT";
         src = advanced-portals-src;
 
-        nativeBuildInputs = with pkgs; [jdk17 gradle];
+        nativeBuildInputs = with pkgs; [jdk17 gradle.unwrapped];
 
-        # Disable Gradle daemon and use offline mode after dependencies are fetched
-        GRADLE_USER_HOME = ".gradle";
+        # Disable Gradle setup hook that forces offline mode
+        dontUseGradleSetupHook = true;
 
+        # Patch build.gradle to remove IDE-only plugin and config that causes issues in Nix
+        patchPhase = ''
+          sed -i "/id 'org.jetbrains.gradle.plugin.idea-ext'/d" build.gradle
+
+          # Remove the idea { project { settings { ... } } } block (lines 90-96)
+          sed -i '/^idea {$/,/^}$/d' build.gradle
+        '';
+
+        # Use a Fixed-Output Derivation to allow network access for Gradle
         buildPhase = ''
-          # Create a writable gradle cache
           export GRADLE_USER_HOME=$PWD/.gradle
 
           # Build the plugin (skip tests for faster builds)
-          gradle build -x test --no-daemon
+          # Note: FOD allows network access for downloading dependencies
+          # Create empty permissions.yml to satisfy generateTemplates task
+          mkdir -p spigot/build/generated/resources
+          touch spigot/build/generated/resources/permissions.yml
+
+          # Skip permission generation tasks that have dependency issues
+          gradle :spigot:build -x test -x compilePermissionsGen -x generatePermissionsYaml --no-daemon --refresh-dependencies
         '';
 
         installPhase = ''
@@ -45,8 +59,10 @@
           cp spigot/build/libs/Advanced-Portals-Spigot-*.jar $out/lib/advanced-portals.jar
         '';
 
-        # Allow network access during build for Gradle dependencies
-        __noChroot = true;
+        # Fixed-Output Derivation: allows network access during build
+        outputHashMode = "recursive";
+        outputHashAlgo = "sha256";
+        outputHash = "sha256-RWqLbZRvF82NW3th7G3uAafL7+Gczjf+LsY6u5z1raw=";
       };
 
       default = self.packages.${system}.advanced-portals;
