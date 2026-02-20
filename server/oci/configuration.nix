@@ -7,21 +7,181 @@
   mkPortalsConfig,
   ...
 }: let
-  # Import user-specific configuration
   userConfig = import ./config.nix;
-  # Velocity and Paper packages from nixpkgs
-  # Paper: 1.21.11-69
+
   velocity = pkgs.velocity;
   paperServer = pkgs.papermc;
 
-  # Advanced Portals plugin
   advancedPortalsJar = mkAdvancedPortals pkgs;
-  advancedPortalsConfig = mkPortalsConfig {
-    enableProxySupport = true;
-  };
 
   # Shared forwarding secret path
   secretFile = "/var/lib/velocity/forwarding.secret";
+
+  # Full paper-global.yml baked at build time (secret substituted at runtime)
+  paperGlobalYml = pkgs.writeText "paper-global.yml" ''
+    _version: 31
+    anticheat:
+      obfuscation:
+        items:
+          all-models:
+            also-obfuscate: []
+            dont-obfuscate:
+            - minecraft:lodestone_tracker
+            sanitize-count: true
+          enable-item-obfuscation: false
+          model-overrides:
+            minecraft:elytra:
+              also-obfuscate: []
+              dont-obfuscate:
+              - minecraft:damage
+              sanitize-count: true
+    block-updates:
+      disable-chorus-plant-updates: false
+      disable-mushroom-block-updates: false
+      disable-noteblock-updates: false
+      disable-tripwire-updates: false
+    chunk-loading-advanced:
+      auto-config-send-distance: true
+      player-max-concurrent-chunk-generates: 0
+      player-max-concurrent-chunk-loads: 0
+    chunk-loading-basic:
+      player-max-chunk-generate-rate: -1.0
+      player-max-chunk-load-rate: 100.0
+      player-max-chunk-send-rate: 75.0
+    chunk-system:
+      io-threads: -1
+      worker-threads: -1
+    collisions:
+      enable-player-collisions: true
+      send-full-pos-for-hard-colliding-entities: true
+    commands:
+      ride-command-allow-player-as-vehicle: false
+      suggest-player-names-when-null-tab-completions: true
+      time-command-affects-all-worlds: false
+    console:
+      enable-brigadier-completions: true
+      enable-brigadier-highlighting: true
+      has-all-permissions: false
+    item-validation:
+      book:
+        author: 8192
+        page: 16384
+        title: 8192
+      book-size:
+        page-max: 2560
+        total-multiplier: 0.98
+      display-name: 8192
+      lore-line: 8192
+      resolve-selectors-in-books: false
+    logging:
+      deobfuscate-stacktraces: true
+    messages:
+      kick:
+        authentication-servers-down: <lang:multiplayer.disconnect.authservers_down>
+        connection-throttle: Connection throttled! Please wait before reconnecting.
+        flying-player: <lang:multiplayer.disconnect.flying>
+        flying-vehicle: <lang:multiplayer.disconnect.flying>
+      no-permission: <red>I'm sorry, but you do not have permission to perform this command.
+        Please contact the server administrators if you believe that this is in error.
+      use-display-name-in-quit-message: false
+    misc:
+      chat-threads:
+        chat-executor-core-size: -1
+        chat-executor-max-size: -1
+      client-interaction-leniency-distance: default
+      compression-level: default
+      enable-nether: true
+      fix-far-end-terrain-generation: true
+      load-permissions-yml-before-plugins: true
+      max-joins-per-tick: 5
+      prevent-negative-villager-demand: false
+      region-file-cache-size: 256
+      send-full-pos-for-item-entities: false
+      strict-advancement-dimension-check: false
+      use-alternative-luck-formula: false
+      use-dimension-type-for-custom-spawners: false
+      xp-orb-groups-per-area: default
+    packet-limiter:
+      all-packets:
+        action: KICK
+        interval: 7.0
+        max-packet-rate: 500.0
+      kick-message: <red><lang:disconnect.exceeded_packet_rate>
+      overrides:
+        minecraft:place_recipe:
+          action: DROP
+          interval: 4.0
+          max-packet-rate: 5.0
+    player-auto-save:
+      max-per-tick: -1
+      rate: -1
+    proxies:
+      bungee-cord:
+        online-mode: true
+      proxy-protocol: false
+      velocity:
+        enabled: true
+        online-mode: true
+        secret: __VELOCITY_SECRET__
+    scoreboards:
+      save-empty-scoreboard-teams: true
+      track-plugin-scoreboards: false
+    spam-limiter:
+      incoming-packet-threshold: 300
+      recipe-spam-increment: 1
+      recipe-spam-limit: 20
+      tab-spam-increment: 1
+      tab-spam-limit: 500
+    spark:
+      enable-immediately: false
+      enabled: true
+    unsupported-settings:
+      allow-headless-pistons: false
+      allow-permanent-block-break-exploits: false
+      allow-piston-duplication: false
+      allow-unsafe-end-portal-teleportation: false
+      compression-format: ZLIB
+      perform-username-validation: true
+      skip-tripwire-hook-placement-validation: false
+      skip-vanilla-damage-tick-when-shield-blocked: false
+      update-equipment-on-player-actions: true
+    watchdog:
+      early-warning-delay: 10000
+      early-warning-every: 5000
+  '';
+
+  # Full Advanced Portals config baked at build time
+  advancedPortalsConfigFile = pkgs.writeText "advanced-portals-config.yaml" ''
+    blockSpectatorMode: true
+    commandPortals:
+      console: true
+      enabled: true
+      op: true
+      permsWildcard: true
+      proxy: true
+    defaultTriggerBlock: NETHER_PORTAL
+    disableGatewayBeam: true
+    disablePhysicsEvents: true
+    enableProxySupport: true
+    joinCooldown: 5
+    maxPortalVisualisationSize: 1000
+    maxSelectionVisualisationSize: 9000
+    playFailSound: true
+    portalProtection: true
+    portalProtectionRadius: 5
+    selectorMaterial: IRON_AXE
+    showVisibleRange: 50
+    stopWaterFlow: true
+    throwbackStrength: 0.7
+    translationFile: en_GB
+    useOnlySpecialAxe: true
+    warpEffect:
+      enabled: true
+      soundEffect: ender
+      visualEffect: ender
+    warpMessageInChat: false
+    warpMessageOnActionBar: true
+  '';
 
   # Helper to create Paper server configuration
   mkPaperServer = {
@@ -46,14 +206,11 @@
         Restart = "always";
         RestartSec = "10s";
 
-        # Setup script
         ExecStartPre = pkgs.writeShellScript "paper-${name}-setup.sh" ''
           cd /var/lib/minecraft/${name}
 
-          # Accept EULA
           echo "eula=true" > eula.txt
 
-          # Create server.properties
           cat > server.properties << 'PROPS'
           server-port=${toString port}
           server-ip=127.0.0.1
@@ -77,33 +234,22 @@
           allow-flight=false
           PROPS
 
-          # Create config directory for Paper
+          # Bake full paper-global.yml with velocity secret substituted at runtime
           mkdir -p config
-
-          # Configure Paper with Velocity modern forwarding
-          # Read the secret and substitute it into the config
           SECRET=$(cat ${secretFile})
-          cat > config/paper-global.yml << YAML
-          proxies:
-            velocity:
-              enabled: true
-              online-mode: true
-              secret: "$SECRET"
-          YAML
+          ${pkgs.gnused}/bin/sed "s|__VELOCITY_SECRET__|$SECRET|" ${paperGlobalYml} > config/paper-global.yml
 
-          # Install Advanced Portals plugin
+          # Install Advanced Portals plugin with baked config
           mkdir -p plugins/AdvancedPortals
           ln -sf ${advancedPortalsJar}/lib/advanced-portals.jar plugins/advanced-portals.jar
+          cp ${advancedPortalsConfigFile} plugins/AdvancedPortals/config.yaml
 
-          # Copy Advanced Portals config with proxy support enabled
-          cat > plugins/AdvancedPortals/config.yaml << 'YAML'
-          ${advancedPortalsConfig}
-          YAML
+          # Remove old manually-installed plugin jars
+          rm -f plugins/AdvancedPortals-Spigot.jar plugins/.paper-remapped/AdvancedPortals-Spigot.jar
 
-          echo "Paper ${name} server setup complete with Advanced Portals"
+          echo "Paper ${name} server setup complete"
         '';
 
-        # Start Paper server - use nixpkgs papermc
         ExecStart = "${pkgs.jdk21}/bin/java -Xms${
           toString memoryMB
         }M -Xmx${
@@ -115,25 +261,20 @@
 in {
   imports = [./hardware-configuration.nix];
 
-  # Allow unfree packages (required for Minecraft/Paper server)
   nixpkgs.config.allowUnfree = true;
 
-  # Boot loader configuration
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Networking
   networking.hostName = "minecraft";
   networking.firewall = {
     enable = true;
     allowedTCPPorts = [
       22 # SSH
       25565 # Velocity Proxy (PUBLIC)
-      # Backend servers (25566-25568) are NOT exposed - internal only
     ];
   };
 
-  # SSH with strict security
   services.openssh = {
     enable = true;
     settings = {
@@ -143,7 +284,6 @@ in {
     };
   };
 
-  # fail2ban for brute-force protection
   services.fail2ban = {
     enable = true;
     maxretry = 5;
@@ -153,12 +293,10 @@ in {
     ];
   };
 
-  # Root user with SSH keys
   users.users.root = {
     openssh.authorizedKeys.keys = userConfig.sshKeys;
   };
 
-  # Velocity user (shares minecraft group)
   users.users.velocity = {
     isSystemUser = true;
     group = "minecraft";
@@ -166,7 +304,6 @@ in {
     createHome = true;
   };
 
-  # Minecraft user for Paper servers
   users.users.minecraft = {
     isSystemUser = true;
     group = "minecraft";
@@ -175,17 +312,14 @@ in {
   };
   users.groups.minecraft = {};
 
-  # Create server directories
   systemd.tmpfiles.rules = [
     "d /var/lib/minecraft/lobby 0755 minecraft minecraft -"
     "d /var/lib/minecraft/creative 0755 minecraft minecraft -"
     "d /var/lib/minecraft/survival 0755 minecraft minecraft -"
   ];
 
-  # Velocity Proxy + Paper Server Services
   systemd.services =
     {
-      # Velocity Proxy Service
       velocity-proxy = {
         description = "Velocity Minecraft Proxy";
         wantedBy = ["multi-user.target"];
@@ -199,44 +333,32 @@ in {
           Restart = "always";
           RestartSec = "10s";
 
-          # Setup script - generates secret and configures Velocity
           ExecStartPre = pkgs.writeShellScript "velocity-setup.sh" ''
             cd /var/lib/velocity
 
-            # Make velocity directory accessible to minecraft group
             chmod 755 /var/lib/velocity
 
-            # Generate forwarding secret if it doesn't exist
             if [ ! -f forwarding.secret ]; then
               echo "Generating forwarding secret..."
               ${pkgs.openssl}/bin/openssl rand -base64 32 > forwarding.secret
               chmod 644 forwarding.secret
               chown velocity:minecraft forwarding.secret
-              echo "Forwarding secret generated"
             fi
 
-            # Ensure secret is readable (in case it was created with wrong perms before)
             chmod 644 forwarding.secret
 
-            # Always copy velocity.toml configuration (overwrite to get latest changes)
-            echo "Installing Velocity configuration..."
             cp ${./velocity.toml} velocity.toml
             chmod 644 velocity.toml
 
-            # Install Advanced Portals plugin
             mkdir -p plugins
             ln -sf ${advancedPortalsJar}/lib/advanced-portals.jar plugins/advanced-portals.jar
-
-            echo "Velocity proxy setup complete with Advanced Portals"
           '';
 
-          # Start Velocity proxy
           ExecStart = "${velocity}/bin/velocity";
         };
       };
     }
-    // # Paper Server Services (3 servers: lobby, creative, survival)
-    mkPaperServer {
+    // mkPaperServer {
       name = "lobby";
       port = 25566;
       gamemode = "survival";
@@ -261,7 +383,6 @@ in {
       memoryMB = 4096;
     };
 
-  # Essential system administration tools
   environment.systemPackages = with pkgs; [
     vim
     git
@@ -279,9 +400,8 @@ in {
     strace
     tcpdump
     iftop
-    jdk21 # Java 21 for Minecraft
+    jdk21
   ];
 
-  # NixOS system state version
   system.stateVersion = "25.11";
 }
