@@ -57,6 +57,22 @@ async function deploy() {
     ]);
   }
 
+  // Copy plugins directory (referenced by flake.nix as path:../plugins/advanced-portals)
+  console.log("\nCopying plugins directory...");
+  await runCommand("ssh", [
+    "-o",
+    "StrictHostKeyChecking=no",
+    `root@${publicIp}`,
+    "mkdir -p /etc/nixos/plugins",
+  ]);
+  await runCommand("scp", [
+    "-r",
+    "-o",
+    "StrictHostKeyChecking=no",
+    "../plugins/advanced-portals",
+    `root@${publicIp}:/etc/nixos/plugins/`,
+  ]);
+
   // Run nixos-rebuild
   console.log("\nRunning nixos-rebuild switch...");
   await runCommand("ssh", [

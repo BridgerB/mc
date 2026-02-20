@@ -1,28 +1,13 @@
 {
   "nodes": {
-    "advanced-portals": {
-      "inputs": {
-        "advanced-portals-src": "advanced-portals-src",
-        "nixpkgs": "nixpkgs"
-      },
-      "locked": {
-        "path": "../plugins/advanced-portals",
-        "type": "path"
-      },
-      "original": {
-        "path": "../plugins/advanced-portals",
-        "type": "path"
-      },
-      "parent": []
-    },
     "advanced-portals-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1760446803,
-        "narHash": "sha256-YCwdgZz6U8PE9kvgz5Krw/5G0oX3M0meE74WmdMhw6I=",
+        "lastModified": 1769567255,
+        "narHash": "sha256-tyn6kauJUBdh7GKQpNOp40AhEVqXPHKxWWj0M/MxtC0=",
         "owner": "sekwah41",
         "repo": "Advanced-Portals",
-        "rev": "1a92a368bc7e3ae3557beb174b08fdc3c4238a39",
+        "rev": "1a3140770d4ad4f9bd7ce2d18b692b1a2a4a7a4c",
         "type": "github"
       },
       "original": {
@@ -34,27 +19,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1763966396,
-        "narHash": "sha256-6eeL1YPcY1MV3DDStIDIdy/zZCDKgHdkCmsrLJFiZf0=",
+        "lastModified": 1771369470,
+        "narHash": "sha256-0NBlEBKkN3lufyvFegY4TYv5mCNHbi5OmBDrzihbBMQ=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "5ae3b07d8d6527c42f17c876e404993199144b6a",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_2": {
-      "locked": {
-        "lastModified": 1763966396,
-        "narHash": "sha256-6eeL1YPcY1MV3DDStIDIdy/zZCDKgHdkCmsrLJFiZf0=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "5ae3b07d8d6527c42f17c876e404993199144b6a",
+        "rev": "0182a361324364ae3f436a63005877674cf45efb",
         "type": "github"
       },
       "original": {
@@ -66,8 +35,8 @@
     },
     "root": {
       "inputs": {
-        "advanced-portals": "advanced-portals",
-        "nixpkgs": "nixpkgs_2"
+        "advanced-portals-src": "advanced-portals-src",
+        "nixpkgs": "nixpkgs"
       }
     }
   },

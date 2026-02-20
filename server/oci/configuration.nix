@@ -3,37 +3,21 @@
   config,
   lib,
   pkgs,
-  advanced-portals,
+  mkAdvancedPortals,
+  mkPortalsConfig,
   ...
 }: let
   # Import user-specific configuration
   userConfig = import ./config.nix;
   # Velocity and Paper packages from nixpkgs
-  # Velocity: 3.4.0-unstable-2025-11-09
-  # Paper: 1.21.10-91
+  # Paper: 1.21.11-69
   velocity = pkgs.velocity;
   paperServer = pkgs.papermc;
 
-  # Advanced Portals plugin (unified JAR for both Velocity and Paper)
-  advancedPortalsJar = advanced-portals.packages.${pkgs.system}.advanced-portals;
-  advancedPortalsConfig = advanced-portals.lib.mkConfig {
+  # Advanced Portals plugin
+  advancedPortalsJar = mkAdvancedPortals pkgs;
+  advancedPortalsConfig = mkPortalsConfig {
     enableProxySupport = true;
-  };
-
-  # Lobby world extracted from tarball
-  lobbyWorld = pkgs.stdenv.mkDerivation {
-    name = "lobby-world";
-    src = pkgs.fetchurl {
-      url = "file://${toString ../worlds/lobby.tar.xz}";
-      sha256 = "1f25y7sb0i0fvmn3mzxawhnq4l8ac6pgm9mgszxx2fk4qa97cbas";
-    };
-
-    sourceRoot = ".";
-
-    installPhase = ''
-      mkdir -p $out
-      cp -r lobby-world/* $out/
-    '';
   };
 
   # Shared forwarding secret path
@@ -115,15 +99,6 @@
           cat > plugins/AdvancedPortals/config.yaml << 'YAML'
           ${advancedPortalsConfig}
           YAML
-
-          # For lobby server, deploy the lobby world if it doesn't exist
-          ${lib.optionalString (name == "lobby") ''
-            if [ ! -d world ]; then
-              echo "Deploying lobby world..."
-              cp -r ${lobbyWorld} world
-              chown -R minecraft:minecraft world
-            fi
-          ''}
 
           echo "Paper ${name} server setup complete with Advanced Portals"
         '';
