@@ -9,6 +9,9 @@ A1).
 This configuration deploys a production-ready Minecraft network with:
 
 - **Velocity Proxy** (from nixpkgs) - High-performance Minecraft proxy
+- **Geyser** - Bedrock-to-Java translation (allows Xbox, mobile, Switch, PS
+  players to join)
+- **Floodgate** - Bedrock authentication (no Java account needed)
 - **Paper Server 1.21.11** (from nixpkgs) - Four backend servers
   (lobby, creative, survival, the-walls)
 - **Advanced Portals** - Portal plugin for cross-server teleportation
@@ -42,7 +45,9 @@ This configuration deploys a production-ready Minecraft network with:
 Internet -> OCI Firewall -> NixOS Host
                             |-- SSH (port 22)
                             |-- fail2ban
-                            +-- Velocity Proxy (port 25565, PUBLIC)
+                            +-- Velocity Proxy (TCP 25565 Java, UDP 19132 Bedrock)
+                                |-- Geyser (Bedrock-to-Java translation)
+                                |-- Floodgate (Bedrock auth)
                                 |-- systemd: velocity-proxy.service
                                 |-- /var/lib/velocity/
                                 |-- Modern Forwarding Secret
@@ -118,9 +123,25 @@ nixos-rebuild switch --flake .#minecraft
 
 ### 4. Connect to Minecraft
 
+**Java Edition:**
+
 ```
-Minecraft Server Address: 144.24.32.76:25565
+Server Address: mc.bridgerb.com
 ```
+
+**Bedrock Edition** (Windows 10, iOS, Android):
+
+```
+Server Address: mc.bridgerb.com
+Port: 19132
+```
+
+**Console** (Xbox, PlayStation, Switch) — no "Add Server" button:
+
+Use the BedrockConnect DNS trick:
+1. Set console DNS to `104.238.130.180` (secondary: `8.8.8.8`)
+2. In Minecraft, go to Servers tab and click any Featured Server
+3. You'll get a server list UI — enter `mc.bridgerb.com` port `19132`
 
 ### 5. Switch Between Servers
 
@@ -197,9 +218,44 @@ mkPaperServer {
 
 ### Firewall
 
-Only port 22 (SSH) and port 25565 (Velocity proxy) are exposed. The backend
-Paper servers on ports 25566-25569 are bound to 127.0.0.1 and are NOT
-accessible externally.
+Ports 22 (SSH), 25565/TCP (Velocity/Java), and 19132/UDP (Geyser/Bedrock) are
+exposed. The backend Paper servers on ports 25566-25569 are bound to 127.0.0.1
+and are NOT accessible externally.
+
+**Note:** Both the NixOS firewall AND the OCI VCN security list must allow
+traffic. The NixOS firewall is managed declaratively in `configuration.nix`. The
+OCI cloud firewall must be updated separately.
+
+#### OCI Security List (Cloud Firewall)
+
+To add or update ingress rules via the OCI CLI (requires the `API_KEY` profile).
+The subnet OCID is in `config.ts`.
+
+```bash
+# Get the security list ID for the subnet
+oci network subnet get --profile API_KEY \
+  --subnet-id "<subnet-ocid-from-config.ts>" \
+  --query 'data."security-list-ids"'
+
+# View current ingress rules
+oci network security-list get --profile API_KEY \
+  --security-list-id "<security-list-ocid>" \
+  --query 'data."ingress-security-rules"'
+
+# Update rules (REPLACES all ingress rules — include existing ones!)
+# Protocol 6 = TCP, Protocol 17 = UDP
+oci network security-list update --profile API_KEY \
+  --security-list-id "<security-list-ocid>" \
+  --ingress-security-rules '[
+    {"description":"SSH","protocol":"6","source":"0.0.0.0/0","sourceType":"CIDR_BLOCK","isStateless":false,"tcpOptions":{"destinationPortRange":{"min":22,"max":22}}},
+    {"description":"Minecraft Java","protocol":"6","source":"0.0.0.0/0","sourceType":"CIDR_BLOCK","isStateless":false,"tcpOptions":{"destinationPortRange":{"min":25565,"max":25565}}},
+    {"description":"Geyser Bedrock","protocol":"17","source":"0.0.0.0/0","sourceType":"CIDR_BLOCK","isStateless":false,"udpOptions":{"destinationPortRange":{"min":19132,"max":19132}}}
+  ]' --force
+```
+
+**Important:** The `update` command replaces ALL ingress rules. Always include
+every existing rule you want to keep, plus any new ones. Omitting a rule deletes
+it.
 
 ## Server Management
 

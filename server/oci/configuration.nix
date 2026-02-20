@@ -5,6 +5,8 @@
   pkgs,
   mkAdvancedPortals,
   mkPortalsConfig,
+  mkGeyserVelocity,
+  mkFloodgateVelocity,
   ...
 }: let
   userConfig = import ./config.nix;
@@ -13,6 +15,8 @@
   paperServer = pkgs.papermc;
 
   advancedPortalsJar = mkAdvancedPortals pkgs;
+  geyserJar = mkGeyserVelocity pkgs;
+  floodgateJar = mkFloodgateVelocity pkgs;
 
   # Shared forwarding secret path
   secretFile = "/var/lib/velocity/forwarding.secret";
@@ -183,6 +187,27 @@
     warpMessageOnActionBar: true
   '';
 
+  # Geyser config baked at build time (Bedrock-to-Java translation)
+  geyserConfigYml = pkgs.writeText "geyser-config.yml" ''
+    bedrock:
+      address: 0.0.0.0
+      port: 19132
+      clone-remote-port: false
+      motd1: Velocity Network
+      motd2: Geyser
+      server-name: mc.bridgerb.com
+    remote:
+      auth-type: floodgate
+    command-suggestions: true
+    passthrough-motd: true
+    passthrough-player-counts: true
+    legacy-ping-passthrough: false
+    max-players: 100
+    above-bedrock-nether-building: false
+    force-resource-packs: true
+    xbox-achievements-enabled: false
+  '';
+
   # Helper to create Paper server configuration
   mkPaperServer = {
     name,
@@ -284,6 +309,9 @@ in {
       22 # SSH
       25565 # Velocity Proxy (PUBLIC)
     ];
+    allowedUDPPorts = [
+      19132 # Geyser Bedrock (PUBLIC)
+    ];
   };
 
   services.openssh = {
@@ -364,6 +392,18 @@ in {
 
             mkdir -p plugins
             ln -sf ${advancedPortalsJar}/lib/advanced-portals.jar plugins/advanced-portals.jar
+
+            # Remove old manually-installed plugin jars
+            rm -f plugins/AdvancedPortals-Spigot.jar
+
+            # Install Geyser (Bedrock-to-Java translation) and Floodgate (Bedrock auth)
+            ln -sf ${geyserJar} plugins/Geyser-Velocity.jar
+            ln -sf ${floodgateJar} plugins/floodgate-velocity.jar
+
+            # Bake Geyser config
+            mkdir -p plugins/Geyser-Velocity
+            cp ${geyserConfigYml} plugins/Geyser-Velocity/config.yml
+            chmod 644 plugins/Geyser-Velocity/config.yml
           '';
 
           ExecStart = "${velocity}/bin/velocity";

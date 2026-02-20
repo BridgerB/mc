@@ -83,6 +83,22 @@
       useOnlySpecialAxe: false
       enableCustomPortalBlocks: true
     '';
+
+    # Geyser - Bedrock to Java translation proxy (Velocity plugin)
+    mkGeyserVelocity = pkgs:
+      pkgs.fetchurl {
+        url = "https://download.geysermc.org/v2/projects/geyser/versions/2.9.4/builds/1077/downloads/velocity";
+        name = "Geyser-Velocity.jar";
+        sha256 = "1kj486m5yp6wvm1ibbrgzx9lqvr2iqkyykiqb4h8h9azrq3fbkdi";
+      };
+
+    # Floodgate - Bedrock auth without Java account (Velocity plugin)
+    mkFloodgateVelocity = pkgs:
+      pkgs.fetchurl {
+        url = "https://download.geysermc.org/v2/projects/floodgate/versions/2.2.5/builds/127/downloads/velocity";
+        name = "floodgate-velocity.jar";
+        sha256 = "1inpy09gz9ly18arqwrmpzxfh6pz1b318p2lqya1vzy0ijwma429";
+      };
   in {
     packages = forAllSystems (system: let
       pkgs = import nixpkgs {
@@ -99,7 +115,7 @@
     nixosConfigurations.minecraft = nixpkgs.lib.nixosSystem {
       system = "aarch64-linux";
       specialArgs = {
-        inherit mkAdvancedPortals mkPortalsConfig;
+        inherit mkAdvancedPortals mkPortalsConfig mkGeyserVelocity mkFloodgateVelocity;
       };
       modules = [
         ./configuration.nix
