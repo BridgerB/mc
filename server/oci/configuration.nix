@@ -191,6 +191,8 @@
     pvp ? true,
     difficulty ? "normal",
     memoryMB ? 4096,
+    enableCommandBlocks ? false,
+    allowFlight ? false,
   }: {
     "minecraft-${name}" = {
       description = "Paper Minecraft Server - ${name}";
@@ -224,14 +226,22 @@
           }
           motd=${name} server (via Velocity)
           online-mode=false
-          enable-command-block=false
+          enable-command-block=${
+            if enableCommandBlocks
+            then "true"
+            else "false"
+          }
           spawn-protection=0
           max-world-size=29999984
           level-name=world
           level-seed=
           level-type=minecraft\:normal
           allow-nether=true
-          allow-flight=false
+          allow-flight=${
+            if allowFlight
+            then "true"
+            else "false"
+          }
           PROPS
 
           # Bake full paper-global.yml with velocity secret substituted at runtime
@@ -243,6 +253,7 @@
           mkdir -p plugins/AdvancedPortals
           ln -sf ${advancedPortalsJar}/lib/advanced-portals.jar plugins/advanced-portals.jar
           cp ${advancedPortalsConfigFile} plugins/AdvancedPortals/config.yaml
+          chmod 644 plugins/AdvancedPortals/config.yaml
 
           # Remove old manually-installed plugin jars
           rm -f plugins/AdvancedPortals-Spigot.jar plugins/.paper-remapped/AdvancedPortals-Spigot.jar
@@ -316,6 +327,7 @@ in {
     "d /var/lib/minecraft/lobby 0755 minecraft minecraft -"
     "d /var/lib/minecraft/creative 0755 minecraft minecraft -"
     "d /var/lib/minecraft/survival 0755 minecraft minecraft -"
+    "d /var/lib/minecraft/the-walls 0755 minecraft minecraft -"
   ];
 
   systemd.services =
@@ -381,6 +393,16 @@ in {
       pvp = true;
       difficulty = "hard";
       memoryMB = 4096;
+    }
+    // mkPaperServer {
+      name = "the-walls";
+      port = 25569;
+      gamemode = "adventure";
+      pvp = true;
+      difficulty = "normal";
+      memoryMB = 4096;
+      enableCommandBlocks = true;
+      allowFlight = true;
     };
 
   environment.systemPackages = with pkgs; [

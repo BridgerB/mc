@@ -6,7 +6,7 @@ bind = "0.0.0.0:25565"
 
 # What should be the MOTD? This gets displayed when the player adds your server to
 # their server list. MiniMessage format is used.
-motd = "<gold>Velocity Multi-Server Network\n<gray>Lobby • Creative • Survival"
+motd = "<gold>Velocity Multi-Server Network\n<gray>Lobby • Creative • Survival • The Walls"
 
 # What should we display for the maximum number of players? (Velocity does not support a cap
 # on the number of players online.)
@@ -74,6 +74,7 @@ enable-player-address-logging = true
   lobby = "127.0.0.1:25566"
   creative = "127.0.0.1:25567"
   survival = "127.0.0.1:25568"
+  the-walls = "127.0.0.1:25569"
 
   # In what order we should try servers when a player logs in or is kicked from a server.
   try = [

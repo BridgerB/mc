@@ -9,8 +9,8 @@ A1).
 This configuration deploys a production-ready Minecraft network with:
 
 - **Velocity Proxy** (from nixpkgs) - High-performance Minecraft proxy
-- **Paper Server 1.21.11** (from nixpkgs) - Three backend servers
-  (lobby, creative, survival)
+- **Paper Server 1.21.11** (from nixpkgs) - Four backend servers
+  (lobby, creative, survival, the-walls)
 - **Advanced Portals** - Portal plugin for cross-server teleportation
 - **OCI ARM Free Tier** - 4 OCPU, 24GB RAM (free forever)
 - **NixOS** - Declarative, reproducible Linux distribution
@@ -53,9 +53,12 @@ Internet -> OCI Firewall -> NixOS Host
                                     |-- Paper Creative (port 25567)
                                     |   +-- systemd: minecraft-creative.service
                                     |       +-- /var/lib/minecraft/creative/
-                                    +-- Paper Survival (port 25568)
-                                        +-- systemd: minecraft-survival.service
-                                            +-- /var/lib/minecraft/survival/
+                                    |-- Paper Survival (port 25568)
+                                    |   +-- systemd: minecraft-survival.service
+                                    |       +-- /var/lib/minecraft/survival/
+                                    +-- Paper The Walls (port 25569)
+                                        +-- systemd: minecraft-the-walls.service
+                                            +-- /var/lib/minecraft/the-walls/
 ```
 
 ## Quick Start
@@ -127,6 +130,7 @@ Once connected, use the Velocity `/server` command:
 /server lobby      - Switch to the lobby server (survival, no PVP)
 /server creative   - Switch to the creative server (creative mode, peaceful)
 /server survival   - Switch to the survival server (hard difficulty, PVP enabled)
+/server the-walls  - Switch to The Walls (PVP minigame, adventure mode)
 ```
 
 Portals between servers are also set up via Advanced Portals.
@@ -159,15 +163,26 @@ the `mkPaperServer` helper function:
 - Difficulty: hard
 - Memory: 4GB
 
+**The Walls Server** (port 25569):
+
+- Gamemode: adventure
+- PVP: enabled
+- Difficulty: normal
+- Memory: 4GB
+- Command blocks: enabled
+- Flight: enabled (for spectator mode)
+- World: "The Walls: Remastered" PVP minigame map (originally for 1.16.4)
+
 ### Memory Allocation
 
-Total memory allocation (~12GB out of 24GB):
+Total memory allocation (~16GB out of 24GB):
 
 - **Lobby Server**: 4GB
 - **Creative Server**: 4GB
 - **Survival Server**: 4GB
+- **The Walls Server**: 4GB
 - **Velocity Proxy**: Uses JVM defaults (~1-2GB)
-- **System/OS**: ~12GB remaining
+- **System/OS**: ~8GB remaining
 
 To adjust memory, edit the `memoryMB` parameter in `configuration.nix`:
 
@@ -183,7 +198,7 @@ mkPaperServer {
 ### Firewall
 
 Only port 22 (SSH) and port 25565 (Velocity proxy) are exposed. The backend
-Paper servers on ports 25566-25568 are bound to 127.0.0.1 and are NOT
+Paper servers on ports 25566-25569 are bound to 127.0.0.1 and are NOT
 accessible externally.
 
 ## Server Management
@@ -192,22 +207,23 @@ accessible externally.
 
 ```bash
 # Check all service statuses
-sudo systemctl status velocity-proxy minecraft-lobby minecraft-creative minecraft-survival
+sudo systemctl status velocity-proxy minecraft-lobby minecraft-creative minecraft-survival minecraft-the-walls
 
 # View logs (live)
 sudo journalctl -u velocity-proxy -f
 sudo journalctl -u minecraft-lobby -f
 sudo journalctl -u minecraft-creative -f
 sudo journalctl -u minecraft-survival -f
+sudo journalctl -u minecraft-the-walls -f
 
 # Restart a specific server
 sudo systemctl restart minecraft-lobby
 
 # Stop all servers
-sudo systemctl stop velocity-proxy minecraft-lobby minecraft-creative minecraft-survival
+sudo systemctl stop velocity-proxy minecraft-lobby minecraft-creative minecraft-survival minecraft-the-walls
 
 # Start all servers
-sudo systemctl start velocity-proxy minecraft-lobby minecraft-creative minecraft-survival
+sudo systemctl start velocity-proxy minecraft-lobby minecraft-creative minecraft-survival minecraft-the-walls
 ```
 
 **Note**: The Paper servers depend on velocity-proxy, so if the proxy restarts,
@@ -225,7 +241,7 @@ all backend servers will restart as well.
 +-- logs/               # Proxy logs
 ```
 
-**Paper Servers** - `/var/lib/minecraft/{lobby,creative,survival}/`:
+**Paper Servers** - `/var/lib/minecraft/{lobby,creative,survival,the-walls}/`:
 
 ```
 /var/lib/minecraft/lobby/
@@ -249,8 +265,22 @@ all backend servers will restart as well.
 # Backup all worlds
 tar -czf /tmp/minecraft-backup-$(date +%Y%m%d).tar.gz \
   -C /var/lib/minecraft \
-  lobby/world survival/world creative/world
+  lobby/world survival/world creative/world the-walls/world
 ```
+
+### The Walls - Initial World Setup
+
+The Walls server uses a pre-built PVP minigame map that must be uploaded once
+before the server can start. The world zip is stored locally (gitignored) at
+`../worlds/the-walls.tar.xz`.
+
+```bash
+# Upload and extract the world (one-time setup)
+scp ../worlds/the-walls.tar.xz root@144.24.32.76:/tmp/
+ssh root@144.24.32.76 'cd /var/lib/minecraft/the-walls && tar -xJf /tmp/the-walls.tar.xz && mv the-walls world && chown -R minecraft:minecraft world && rm /tmp/the-walls.tar.xz'
+```
+
+Paper will auto-upgrade the world from 1.16.4 format to 1.21.11 on first load.
 
 ## Updating
 
