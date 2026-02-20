@@ -73,6 +73,16 @@ async function deploy() {
     `root@${publicIp}:/etc/nixos/plugins/`,
   ]);
 
+  // Copy portals directory (lobby portal definitions)
+  console.log("\nCopying portals directory...");
+  await runCommand("scp", [
+    "-r",
+    "-o",
+    "StrictHostKeyChecking=no",
+    "portals",
+    `root@${publicIp}:/etc/nixos/`,
+  ]);
+
   // Run nixos-rebuild
   console.log("\nRunning nixos-rebuild switch...");
   await runCommand("ssh", [

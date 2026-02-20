@@ -129,8 +129,9 @@ In-game: `/server my-world`
 | creative  | 25567 |
 | survival  | 25568 |
 | the-walls | 25569 |
+| parkour   | 25570 |
 
-Next available: **25570**
+Next available: **25571**
 
 ## Notes
 

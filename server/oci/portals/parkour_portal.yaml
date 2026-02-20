@@ -1,0 +1,17 @@
+args:
+  proxy:
+  - parkour
+  name:
+  - parkour_portal
+  triggerblock:
+  - NETHER_PORTAL
+maxLoc:
+  posX: -11
+  posY: -58
+  posZ: 10
+  worldName: world
+minLoc:
+  posX: -12
+  posY: -60
+  posZ: 10
+  worldName: world

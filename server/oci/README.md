@@ -12,9 +12,10 @@ This configuration deploys a production-ready Minecraft network with:
 - **Geyser** - Bedrock-to-Java translation (allows Xbox, mobile, Switch, PS
   players to join)
 - **Floodgate** - Bedrock authentication (no Java account needed)
-- **Paper Server 1.21.11** (from nixpkgs) - Four backend servers
-  (lobby, creative, survival, the-walls)
+- **Paper Server 1.21.11** (from nixpkgs) - Five backend servers
+  (lobby, creative, survival, the-walls, parkour)
 - **Advanced Portals** - Portal plugin for cross-server teleportation
+- **SmartRejoin** - Reconnects players to their last server on rejoin
 - **OCI ARM Free Tier** - 4 OCPU, 24GB RAM (free forever)
 - **NixOS** - Declarative, reproducible Linux distribution
 - **Modern Forwarding** - Cryptographic player authentication between proxy and

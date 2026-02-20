@@ -99,6 +99,14 @@
         name = "floodgate-velocity.jar";
         sha256 = "1inpy09gz9ly18arqwrmpzxfh6pz1b318p2lqya1vzy0ijwma429";
       };
+
+    # SmartRejoin - Remember last server on rejoin
+    mkSmartRejoin = pkgs:
+      pkgs.fetchurl {
+        url = "https://cdn.modrinth.com/data/smSZvvku/versions/4ZSncmX5/SmartRejoin-1.2.jar";
+        name = "SmartRejoin-1.2.jar";
+        sha256 = "01mazw8yznwq8np589pciq3d346xk7cf49bvv1psb7ys3r1mm5zz";
+      };
   in {
     packages = forAllSystems (system: let
       pkgs = import nixpkgs {
@@ -115,7 +123,7 @@
     nixosConfigurations.minecraft = nixpkgs.lib.nixosSystem {
       system = "aarch64-linux";
       specialArgs = {
-        inherit mkAdvancedPortals mkPortalsConfig mkGeyserVelocity mkFloodgateVelocity;
+        inherit mkAdvancedPortals mkPortalsConfig mkGeyserVelocity mkFloodgateVelocity mkSmartRejoin;
       };
       modules = [
         ./configuration.nix

@@ -7,6 +7,7 @@
   mkPortalsConfig,
   mkGeyserVelocity,
   mkFloodgateVelocity,
+  mkSmartRejoin,
   ...
 }: let
   userConfig = import ./config.nix;
@@ -17,6 +18,7 @@
   advancedPortalsJar = mkAdvancedPortals pkgs;
   geyserJar = mkGeyserVelocity pkgs;
   floodgateJar = mkFloodgateVelocity pkgs;
+  smartRejoinJar = mkSmartRejoin pkgs;
 
   # Shared forwarding secret path
   secretFile = "/var/lib/velocity/forwarding.secret";
@@ -126,7 +128,7 @@
       velocity:
         enabled: true
         online-mode: true
-        secret: __VELOCITY_SECRET__
+        secret: '__VELOCITY_SECRET__'
     scoreboards:
       save-empty-scoreboard-teams: true
       track-plugin-scoreboards: false
@@ -236,6 +238,9 @@
         ExecStartPre = pkgs.writeShellScript "paper-${name}-setup.sh" ''
           cd /var/lib/minecraft/${name}
 
+          # Ensure velocity home is readable (race condition with velocity-proxy startup)
+          chmod 755 /var/lib/velocity 2>/dev/null || true
+
           echo "eula=true" > eula.txt
 
           cat > server.properties << 'PROPS'
@@ -282,6 +287,13 @@
 
           # Remove old manually-installed plugin jars
           rm -f plugins/AdvancedPortals-Spigot.jar plugins/.paper-remapped/AdvancedPortals-Spigot.jar
+
+          # Install portal definitions for lobby
+          if [ "${name}" = "lobby" ]; then
+            mkdir -p plugins/AdvancedPortals/portals
+            cp ${./portals}/*.yaml plugins/AdvancedPortals/portals/
+            chmod 644 plugins/AdvancedPortals/portals/*.yaml
+          fi
 
           echo "Paper ${name} server setup complete"
         '';
@@ -352,10 +364,12 @@ in {
   users.groups.minecraft = {};
 
   systemd.tmpfiles.rules = [
+    "d /var/lib/velocity 0755 velocity minecraft -"
     "d /var/lib/minecraft/lobby 0755 minecraft minecraft -"
     "d /var/lib/minecraft/creative 0755 minecraft minecraft -"
     "d /var/lib/minecraft/survival 0755 minecraft minecraft -"
     "d /var/lib/minecraft/the-walls 0755 minecraft minecraft -"
+    "d /var/lib/minecraft/parkour 0755 minecraft minecraft -"
   ];
 
   systemd.services =
@@ -400,6 +414,10 @@ in {
             ln -sf ${geyserJar} plugins/Geyser-Velocity.jar
             ln -sf ${floodgateJar} plugins/floodgate-velocity.jar
 
+            # Install SmartRejoin (remember last server on rejoin)
+            ln -sf ${smartRejoinJar} plugins/SmartRejoin.jar
+            rm -f plugins/ReconnectVelocity-all.jar
+
             # Bake Geyser config
             mkdir -p plugins/Geyser-Velocity
             cp ${geyserConfigYml} plugins/Geyser-Velocity/config.yml
@@ -413,7 +431,7 @@ in {
     // mkPaperServer {
       name = "lobby";
       port = 25566;
-      gamemode = "survival";
+      gamemode = "adventure";
       pvp = false;
       difficulty = "normal";
       memoryMB = 4096;
@@ -442,6 +460,15 @@ in {
       difficulty = "normal";
       memoryMB = 4096;
       enableCommandBlocks = true;
+      allowFlight = true;
+    }
+    // mkPaperServer {
+      name = "parkour";
+      port = 25570;
+      gamemode = "adventure";
+      pvp = false;
+      difficulty = "peaceful";
+      memoryMB = 2048;
       allowFlight = true;
     };
 
