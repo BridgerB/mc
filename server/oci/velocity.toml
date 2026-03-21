@@ -6,7 +6,7 @@ bind = "0.0.0.0:25565"
 
 # What should be the MOTD? This gets displayed when the player adds your server to
 # their server list. MiniMessage format is used.
-motd = "<gold>mc.bridgerb.com\n<gray>Creative • Survival • The Walls • Parkour"
+motd = "<gold>mc.bridgerb.com\n<gray>Creative • Survival • The Walls • Parkour • Dropper • Exponential • Hot & Heavy • Planet Parkour"
 
 # What should we display for the maximum number of players? (Velocity does not support a cap
 # on the number of players online.)
@@ -76,6 +76,10 @@ enable-player-address-logging = true
   survival = "127.0.0.1:25568"
   the-walls = "127.0.0.1:25569"
   parkour = "127.0.0.1:25570"
+  dropper = "127.0.0.1:25571"
+  exponential = "127.0.0.1:25572"
+  hot-and-heavy = "127.0.0.1:25573"
+  planet-parkour = "127.0.0.1:25574"
 
   # In what order we should try servers when a player logs in or is kicked from a server.
   try = [

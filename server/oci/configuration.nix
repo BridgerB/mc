@@ -220,6 +220,14 @@
     memoryMB ? 4096,
     enableCommandBlocks ? false,
     allowFlight ? false,
+    levelSeed ? "",
+    levelType ? "minecraft\\:normal",
+    viewDistance ? 10,
+    spawnAnimals ? true,
+    spawnMonsters ? true,
+    resourcePackUrl ? "",
+    resourcePackSha1 ? "",
+    requireResourcePack ? false,
   }: {
     "minecraft-${name}" = {
       description = "Paper Minecraft Server - ${name}";
@@ -235,11 +243,13 @@
         Restart = "always";
         RestartSec = "10s";
 
-        ExecStartPre = pkgs.writeShellScript "paper-${name}-setup.sh" ''
+        ExecStartPre = [
+          # Run as root (+prefix) to ensure velocity dir is readable by minecraft user
+          "+${pkgs.writeShellScript "paper-${name}-perms.sh" ''
+            chmod 755 /var/lib/velocity
+          ''}"
+          (pkgs.writeShellScript "paper-${name}-setup.sh" ''
           cd /var/lib/minecraft/${name}
-
-          # Ensure velocity home is readable (race condition with velocity-proxy startup)
-          chmod 755 /var/lib/velocity 2>/dev/null || true
 
           echo "eula=true" > eula.txt
 
@@ -261,14 +271,32 @@
             then "true"
             else "false"
           }
+          view-distance=${toString viewDistance}
           spawn-protection=0
           max-world-size=29999984
           level-name=world
-          level-seed=
-          level-type=minecraft\:normal
+          level-seed=${levelSeed}
+          level-type=${levelType}
           allow-nether=true
           allow-flight=${
             if allowFlight
+            then "true"
+            else "false"
+          }
+          spawn-animals=${
+            if spawnAnimals
+            then "true"
+            else "false"
+          }
+          spawn-monsters=${
+            if spawnMonsters
+            then "true"
+            else "false"
+          }
+          resource-pack=${resourcePackUrl}
+          resource-pack-sha1=${resourcePackSha1}
+          require-resource-pack=${
+            if requireResourcePack
             then "true"
             else "false"
           }
@@ -277,7 +305,8 @@
           # Bake full paper-global.yml with velocity secret substituted at runtime
           mkdir -p config
           SECRET=$(cat ${secretFile})
-          ${pkgs.gnused}/bin/sed "s|__VELOCITY_SECRET__|$SECRET|" ${paperGlobalYml} > config/paper-global.yml
+          TEMPLATE=$(cat ${paperGlobalYml})
+          printf '%s\n' "''${TEMPLATE/__VELOCITY_SECRET__/$SECRET}" > config/paper-global.yml
 
           # Install Advanced Portals plugin with baked config
           mkdir -p plugins/AdvancedPortals
@@ -296,7 +325,8 @@
           fi
 
           echo "Paper ${name} server setup complete"
-        '';
+        '')
+        ];
 
         ExecStart = "${pkgs.jdk21}/bin/java -Xms${
           toString memoryMB
@@ -319,6 +349,7 @@ in {
     enable = true;
     allowedTCPPorts = [
       22 # SSH
+      80 # HTTP (resource packs)
       25565 # Velocity Proxy (PUBLIC)
     ];
     allowedUDPPorts = [
@@ -344,6 +375,14 @@ in {
     ];
   };
 
+  # Serve resource packs over HTTP for Minecraft clients
+  services.nginx = {
+    enable = true;
+    virtualHosts.default = {
+      root = "/var/lib/minecraft/resource-packs";
+    };
+  };
+
   users.users.root = {
     openssh.authorizedKeys.keys = userConfig.sshKeys;
   };
@@ -360,6 +399,7 @@ in {
     group = "minecraft";
     home = "/var/lib/minecraft";
     createHome = true;
+    homeMode = "755";
   };
   users.groups.minecraft = {};
 
@@ -370,6 +410,11 @@ in {
     "d /var/lib/minecraft/survival 0755 minecraft minecraft -"
     "d /var/lib/minecraft/the-walls 0755 minecraft minecraft -"
     "d /var/lib/minecraft/parkour 0755 minecraft minecraft -"
+    "d /var/lib/minecraft/dropper 0755 minecraft minecraft -"
+    "d /var/lib/minecraft/exponential 0755 minecraft minecraft -"
+    "d /var/lib/minecraft/hot-and-heavy 0755 minecraft minecraft -"
+    "d /var/lib/minecraft/planet-parkour 0755 minecraft minecraft -"
+    "d /var/lib/minecraft/resource-packs 0755 root root -"
   ];
 
   systemd.services =
@@ -449,15 +494,18 @@ in {
       port = 25568;
       gamemode = "survival";
       pvp = true;
-      difficulty = "hard";
+      difficulty = "normal";
       memoryMB = 4096;
+      viewDistance = 20;
+      levelSeed = "47";
+      levelType = "minecraft\\:amplified";
     }
     // mkPaperServer {
       name = "the-walls";
       port = 25569;
       gamemode = "adventure";
       pvp = true;
-      difficulty = "normal";
+      difficulty = "peaceful";
       memoryMB = 4096;
       enableCommandBlocks = true;
       allowFlight = true;
@@ -470,6 +518,59 @@ in {
       difficulty = "peaceful";
       memoryMB = 2048;
       allowFlight = true;
+    }
+    // mkPaperServer {
+      name = "dropper";
+      port = 25571;
+      gamemode = "adventure";
+      pvp = false;
+      difficulty = "peaceful";
+      memoryMB = 2048;
+      enableCommandBlocks = true;
+      allowFlight = true;
+      viewDistance = 20;
+      resourcePackUrl = "http://144.24.32.76/dropper.zip";
+      resourcePackSha1 = "49152acd9ab2cd2c386c839c5d7584104e7400e0";
+      requireResourcePack = true;
+    }
+    // mkPaperServer {
+      name = "exponential";
+      port = 25572;
+      gamemode = "adventure";
+      pvp = false;
+      difficulty = "peaceful";
+      memoryMB = 2048;
+      enableCommandBlocks = true;
+      allowFlight = true;
+      viewDistance = 32;
+      spawnAnimals = false;
+      spawnMonsters = false;
+    }
+    // mkPaperServer {
+      name = "hot-and-heavy";
+      port = 25573;
+      gamemode = "adventure";
+      pvp = true;
+      difficulty = "normal";
+      memoryMB = 2048;
+      enableCommandBlocks = true;
+      allowFlight = true;
+      resourcePackUrl = "http://144.24.32.76/hot-and-heavy.zip";
+      resourcePackSha1 = "22104593f027af455cd396b1d4a29460444e93d9";
+      requireResourcePack = true;
+    }
+    // mkPaperServer {
+      name = "planet-parkour";
+      port = 25574;
+      gamemode = "adventure";
+      pvp = false;
+      difficulty = "peaceful";
+      memoryMB = 2048;
+      enableCommandBlocks = true;
+      allowFlight = true;
+      resourcePackUrl = "http://144.24.32.76/planet-parkour.zip";
+      resourcePackSha1 = "ee479873b627c96aa330f6dc86e5ad462135ba04";
+      requireResourcePack = true;
     };
 
   environment.systemPackages = with pkgs; [

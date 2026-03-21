@@ -130,8 +130,12 @@ In-game: `/server my-world`
 | survival  | 25568 |
 | the-walls | 25569 |
 | parkour   | 25570 |
+| dropper   | 25571 |
+| exponential | 25572 |
+| hot-and-heavy | 25573 |
+| planet-parkour | 25574 |
 
-Next available: **25571**
+Next available: **25575**
 
 ## Notes
 
