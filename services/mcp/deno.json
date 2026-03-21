@@ -1,0 +1,14 @@
+{
+  "nodeModulesDir": "auto",
+  "tasks": {
+    "mcp": "deno run -A --no-check server.ts"
+  },
+  "imports": {
+    "@modelcontextprotocol/sdk/server/mcp.js": "npm:@modelcontextprotocol/sdk@latest/server/mcp.js",
+    "@modelcontextprotocol/sdk/server/stdio.js": "npm:@modelcontextprotocol/sdk@latest/server/stdio.js",
+    "zod": "npm:zod@^3",
+    "mineflayer": "npm:mineflayer@^4.33.0",
+    "mineflayer-pathfinder": "npm:mineflayer-pathfinder@^2.4.5",
+    "vec3": "npm:vec3@^0.1.10"
+  }
+}
