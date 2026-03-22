@@ -3,7 +3,7 @@
  * Bot spawns, then pathfinds 100 blocks east from current position.
  */
 
-import { getTrialConfig, emitResult, sleep } from "../harness.js";
+import { getTrialConfig, emitResult, sleep } from "../harness.ts";
 
 const { config, library } = getTrialConfig();
 const DISTANCE = 100;
