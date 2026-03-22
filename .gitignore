@@ -28,3 +28,6 @@ server/worlds
 .servers
 server/oci/result
 data
+services/bot/bench/server/libraries/
+services/bot/bench/server/versions/1.21.1/server-1.21.1.jar
+services/bot/bench/server/logs/latest.log

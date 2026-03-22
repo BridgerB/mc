@@ -1,0 +1,24 @@
+{
+	"name": "mc-bot-bench",
+	"version": "0.1.0",
+	"description": "Benchmarks comparing typecraft vs mineflayer bot performance",
+	"type": "module",
+	"scripts": {
+		"bench:pathfind": "tsx src/pathfind.ts",
+		"bench:mining": "tsx src/mining.ts",
+		"bench:crafting": "tsx src/crafting.ts",
+		"bench:combat": "tsx src/combat.ts",
+		"bench:trading": "tsx src/trading.ts",
+		"bench:all": "tsx src/run-all.ts"
+	},
+	"dependencies": {
+		"mineflayer": "^4.23.0",
+		"mineflayer-pathfinder": "^2.4.5",
+		"typecraft": "file:../../../../typecraft"
+	},
+	"devDependencies": {
+		"tsx": "^4.7.0",
+		"typescript": "^5.7.0",
+		"@types/node": "^25.3.0"
+	}
+}
