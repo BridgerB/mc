@@ -10,8 +10,6 @@
   mkSmartRejoin,
   ...
 }: let
-  userConfig = import ./config.nix;
-
   velocity = pkgs.velocity;
   paperServer = pkgs.papermc;
 
@@ -337,12 +335,7 @@
     };
   };
 in {
-  imports = [./hardware-configuration.nix];
-
-  nixpkgs.config.allowUnfree = true;
-
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
+  imports = [../common.nix];
 
   networking.hostName = "minecraft";
   networking.firewall = {
@@ -357,34 +350,12 @@ in {
     ];
   };
 
-  services.openssh = {
-    enable = true;
-    settings = {
-      PermitRootLogin = "prohibit-password";
-      PasswordAuthentication = false;
-      KbdInteractiveAuthentication = false;
-    };
-  };
-
-  services.fail2ban = {
-    enable = true;
-    maxretry = 5;
-    ignoreIP = [
-      "127.0.0.1/8"
-      "10.0.0.0/8"
-    ];
-  };
-
   # Serve resource packs over HTTP for Minecraft clients
   services.nginx = {
     enable = true;
     virtualHosts.default = {
       root = "/var/lib/minecraft/resource-packs";
     };
-  };
-
-  users.users.root = {
-    openssh.authorizedKeys.keys = userConfig.sshKeys;
   };
 
   users.users.velocity = {
@@ -573,25 +544,6 @@ in {
       requireResourcePack = true;
     };
 
-  environment.systemPackages = with pkgs; [
-    vim
-    git
-    tmux
-    htop
-    btop
-    curl
-    wget
-    jq
-    ripgrep
-    fd
-    ncdu
-    duf
-    lsof
-    strace
-    tcpdump
-    iftop
-    jdk21
-  ];
-
-  system.stateVersion = "25.11";
+  # Paper servers run on Java 21; shared dev tooling lives in ../common.nix.
+  environment.systemPackages = [pkgs.jdk21];
 }

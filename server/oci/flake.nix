@@ -1,5 +1,5 @@
 {
-  description = "NixOS Minecraft Server for Oracle Cloud Infrastructure (OCI) ARM";
+  description = "NixOS Minecraft servers for Oracle Cloud Infrastructure (OCI) ARM — velocity proxy network + simple steve bot server";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -120,13 +120,23 @@
       advancedPortals = mkAdvancedPortals pkgs;
     });
 
-    nixosConfigurations.minecraft = nixpkgs.lib.nixosSystem {
+    # Velocity proxy network (lobby + paper sub-worlds, Geyser/Floodgate, portals)
+    nixosConfigurations.velocity = nixpkgs.lib.nixosSystem {
       system = "aarch64-linux";
       specialArgs = {
         inherit mkAdvancedPortals mkPortalsConfig mkGeyserVelocity mkFloodgateVelocity mkSmartRejoin;
       };
       modules = [
-        ./configuration.nix
+        ./velocity/configuration.nix
+        ./hardware-configuration.nix
+      ];
+    };
+
+    # Simple single-world vanilla server for the Steve bot (MC 26.1.2)
+    nixosConfigurations.steve = nixpkgs.lib.nixosSystem {
+      system = "aarch64-linux";
+      modules = [
+        ./steve/configuration.nix
         ./hardware-configuration.nix
       ];
     };
