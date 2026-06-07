@@ -3,6 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     advanced-portals-src = {
       url = "github:sekwah41/Advanced-Portals/main";
       flake = false;
@@ -12,6 +16,7 @@
   outputs = {
     self,
     nixpkgs,
+    home-manager,
     advanced-portals-src,
   }: let
     forAllSystems = nixpkgs.lib.genAttrs ["x86_64-linux" "aarch64-linux"];
@@ -132,10 +137,12 @@
       ];
     };
 
-    # Simple single-world vanilla server for the Steve bot (MC 26.1.2)
+    # Simple single-world vanilla server for the Steve bot (MC 26.1.2),
+    # plus the bridger dev user + home-manager environment.
     nixosConfigurations.steve = nixpkgs.lib.nixosSystem {
       system = "aarch64-linux";
       modules = [
+        home-manager.nixosModules.home-manager
         ./steve/configuration.nix
         ./hardware-configuration.nix
       ];

@@ -30,7 +30,7 @@ const targetFiles: Record<Target, string[]> = {
     "velocity/portals",
     "../plugins/advanced-portals",
   ],
-  steve: ["steve/configuration.nix"],
+  steve: ["steve/configuration.nix", "steve/home.nix"],
 };
 
 async function run(cmd: string, args: string[]): Promise<void> {

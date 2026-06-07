@@ -69,6 +69,23 @@ in {
     # RCON (25575) is intentionally NOT opened — bound to localhost only.
   };
 
+  # Interactive dev user (SSH login, sudo, home-manager environment).
+  users.users.bridger = {
+    isNormalUser = true;
+    extraGroups = ["wheel"];
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID5mdblREEnjNE8hqgViMurQOrDMPVeW46u9Jbw1oqwB bridger@nixos"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM2/0RiMdk6keMhpqmui0J0USiRQ8Mqy7meOOEPAgVHx bridger@bridgers-MacBook-Pro.local"
+    ];
+  };
+  security.sudo.wheelNeedsPassword = false;
+  nix.settings.trusted-users = ["root" "bridger"];
+
+  home-manager.useGlobalPkgs = true;
+  home-manager.useUserPackages = true;
+  home-manager.backupFileExtension = "bak";
+  home-manager.users.bridger = import ./home.nix;
+
   users.users.minecraft = {
     isSystemUser = true;
     group = "minecraft";
@@ -136,5 +153,11 @@ in {
     };
   };
 
-  environment.systemPackages = [jdk];
+  # MC server Java + dev tooling (shared CLI tools live in ../common.nix).
+  environment.systemPackages = with pkgs; [
+    jdk
+    nodejs_24
+    python3
+    gnumake
+  ];
 }
