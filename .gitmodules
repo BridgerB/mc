@@ -1,0 +1,6 @@
+[submodule "upstream/typecraft"]
+	path = upstream/typecraft
+	url = git@github.com:BridgerB/typecraft.git
+[submodule "upstream/steve"]
+	path = upstream/steve
+	url = git@github.com:BridgerB/steve.git
