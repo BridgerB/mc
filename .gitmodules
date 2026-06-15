@@ -4,3 +4,9 @@
 [submodule "upstream/steve"]
 	path = upstream/steve
 	url = git@github.com:BridgerB/steve.git
+[submodule "upstream/ruststeve"]
+	path = upstream/ruststeve
+	url = git@github.com:BridgerB/ruststeve.git
+[submodule "upstream/rustcraft"]
+	path = upstream/rustcraft
+	url = git@github.com:BridgerB/rustcraft.git

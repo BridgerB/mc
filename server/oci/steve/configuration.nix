@@ -19,7 +19,7 @@
 
   jdk = pkgs.jdk25;
 
-  memoryMB = 8192;
+  memoryMB = 16384;
   rconPassword = "minecraft-test-rcon";
   rconPort = 25575;
   difficulty = "peaceful"; # matches the steve dev server; set "normal" for a survival world
@@ -125,8 +125,8 @@ in {
         gamemode=survival
         enable-command-block=true
         spawn-protection=0
-        view-distance=10
-        simulation-distance=6
+        view-distance=6
+        simulation-distance=4
         server-port=25565
         server-ip=0.0.0.0
         level-seed=typecraft
@@ -137,7 +137,7 @@ in {
         spawn-monsters=true
         spawn-animals=true
         spawn-npcs=true
-        allow-flight=false
+        allow-flight=true
         rate-limit=0
         enable-rcon=true
         rcon.password=${rconPassword}
