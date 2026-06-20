@@ -10,3 +10,6 @@
 [submodule "upstream/rustcraft"]
 	path = upstream/rustcraft
 	url = git@github.com:BridgerB/rustcraft.git
+[submodule "upstream/eye-of-steve"]
+	path = upstream/eye-of-steve
+	url = git@github.com:BridgerB/eye-of-steve.git
