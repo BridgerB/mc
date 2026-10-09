@@ -12,6 +12,7 @@
 - **`upstream/`** — git submodules, each its own repo with its own `CLAUDE.md`:
   - **`steve`** — the project. A SvelteKit 5 dashboard (Svelte 5 runes, `adapter-node`, raw Postgres) that runs the bot in-process and renders a Babylon.js first-person view. The bot lives in `src/lib/steve/`, the typecraft SDK in `src/lib/typecraft/`, the dashboard data layer in `src/lib/server/race.ts`, the UI in `src/routes/+page.svelte`.
   - **`ruststeve`** — Rust port of the bot (single-bot core only).
+  - **`clojurecraft`** — Clojure bot, from scratch and data-oriented (one state value, pure reducer, packets as data). Milestone so far: collect one natural log; CI on a GitHub runner.
 
 ## Dev environment
 
@@ -59,6 +60,8 @@ Ports are **name-derived via `@bridgerb/port-from-name`** (from `package.json` n
 
 **upstream/ruststeve** — Rust port of steve (single-bot core only).
 
+**upstream/clojurecraft** — Clojure bot. `nix shell nixpkgs#jdk25 nixpkgs#clojure`, then `clojure -M:test`, `./local-server.sh start` (game 25571 / RCON 25581), `clojure -M:run --port 25571 --rcon-port 25581 --rcon-pass "$(cat data/local-server/rcon.pass)"`. See its `CLAUDE.md`.
+
 ```bash
 cargo run                # connect and run the speedrun loop
 cargo build
@@ -74,7 +77,7 @@ cargo run --bin datagen   # generate the registry data/ the bot needs at runtime
 
 ## Pitfalls
 
-- **Submodules are separate repos.** `steve` and `ruststeve` each have their own `CLAUDE.md`, toolchain, and remote. Don't run root commands inside a submodule or vice versa.
+- **Submodules are separate repos.** `steve`, `ruststeve` and `clojurecraft` each have their own `CLAUDE.md`, toolchain, and remote. Don't run root commands inside a submodule or vice versa.
 - **steve runs the bot IN-PROCESS.** `npm run dev` starts the vite server *and* connects the bot (`src/lib/server/bot.ts` → `startBot`). Server-side changes (`src/lib/steve/**`, `serve.ts`, `race.ts`) need a vite restart; `+page.svelte` hot-reloads; the viewer bundle needs `npm run sync-viewer`.
 - **steve logs to Postgres**, not SQLite — tables `events` / `ticks` / `inventory_snapshots`, written via `logEvent()`, read by the dashboard's raw SQL. Query with `docker exec <compose>-db-1 psql -U root -d local -c "…"`.
 - **The dashboard reads tables it doesn't own.** The Drizzle schema in steve is vestigial; real queries are raw tagged-template SQL in `src/lib/server/race.ts`. Don't reach for Drizzle to add a dashboard query.
