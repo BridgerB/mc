@@ -12,13 +12,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `typecraft` and `eye-of-steve` **used to be separate submodules; they were merged into `steve`.** Today:
 
-- Only **two** submodules exist: `upstream/steve` and `upstream/ruststeve` (see `.gitmodules`). There is no `upstream/typecraft`, `upstream/eye-of-steve`, or `upstream/rustcraft`.
+- **Three** submodules exist: `upstream/steve`, `upstream/ruststeve` and `upstream/clojurecraft` (a from-scratch Clojure bot; see `.gitmodules`). There is no `upstream/typecraft`, `upstream/eye-of-steve`, or `upstream/rustcraft`.
 - **steve is now one SvelteKit 5 app** that (1) runs the bot **in-process** (`src/lib/server/bot.ts` `startBot`), (2) holds the bot engine at `src/lib/steve/` and the vendored typecraft SDK at `src/lib/typecraft/`, and (3) serves a live "Mission Control" dashboard + Babylon.js 3D view.
 - If any doc says steve is `node src/main.ts`, that typecraft is a submodule with `nix run .#datagen`, that telemetry is SQLite `data/steve.db`, or references `launch-race.sh` — **it is stale.** Reality: `npm run dev`, vendored typecraft, telemetry in **Postgres**, and the multi-bot race launched via `node --import ./typecraft-resolve.mjs src/lib/steve/main.ts --bots N`.
 
 ## Working in this worktree vs the main checkout
 
-You may be in a **git worktree** (e.g. `orca/workspaces/mc/steve`) where the submodules are **not checked out** (`upstream/steve` and `upstream/ruststeve` are empty dirs). The fully populated checkout — with steve's source, `.env`, `data/gym.db`, `LOOP.md`, and `.race-serial` — is the main clone at **`/Users/bridger/Developer/mc`**. To read or run steve, use the populated checkout (`/Users/bridger/Developer/mc/upstream/steve`), or `git submodule update --init` here first.
+You may be in a **git worktree** (e.g. `orca/workspaces/mc/steve`) where the submodules are **not checked out** (`upstream/steve` and `upstream/ruststeve` are empty dirs; `upstream/clojurecraft` may be populated). The fully populated checkout — with steve's source, `.env`, `data/gym.db`, `LOOP.md`, and `.race-serial` — is the main clone at **`/Users/bridger/Developer/mc`**. To read or run steve, use the populated checkout (`/Users/bridger/Developer/mc/upstream/steve`), or `git submodule update --init` here first.
 
 ## Commands
 
@@ -49,6 +49,8 @@ STEP=<slug> node --env-file=.env --import ./typecraft-resolve.mjs gym-cli.ts
 Ports are **name-derived** from `package.json` name (`eye-of-steve`): dashboard **4558**, Postgres **4623**.
 
 ruststeve (`upstream/ruststeve`): `cargo run` (bot loop), `cargo run --bin datagen` first (registry), `cargo test`.
+
+clojurecraft (`upstream/clojurecraft`): `nix shell nixpkgs#jdk25 nixpkgs#clojure`, `clojure -M:test`, `./local-server.sh start` (local vanilla on 25571/25581), `clojure -M:run ...` — its `CLAUDE.md` has the full set.
 
 ## Architecture you can't see from one file
 

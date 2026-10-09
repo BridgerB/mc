@@ -4,3 +4,6 @@
 [submodule "upstream/ruststeve"]
 	path = upstream/ruststeve
 	url = git@github.com:BridgerB/ruststeve.git
+[submodule "upstream/clojurecraft"]
+	path = upstream/clojurecraft
+	url = git@github.com:BridgerB/clojurecraft.git
